@@ -311,12 +311,12 @@ function Play({
   }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
     className: "j-tip"
   }, "\uD83D\uDCA1 ", q.tip), judged ? /*#__PURE__*/React.createElement("button", {
-    className: "next",
+    className: "next calm",
     onClick: () => next(results)
-  }, "\u6B21\u3078") : /*#__PURE__*/React.createElement("button", {
-    className: "next",
+  }, idx + 1 >= queue.length ? "結果を見る" : "次へ →") : /*#__PURE__*/React.createElement("button", {
+    className: "next retry",
     onClick: retry
-  }, "\u3082\u3046\u4E00\u5EA6"))));
+  }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6"))));
 }
 
 /* ── 暗記ドリル（練習）───────────────────────────────────
@@ -398,9 +398,9 @@ function Drill({
   }, judged.good ? "✓ 正解" : "✕ 不正解"), /*#__PURE__*/React.createElement("div", {
     className: "dwhy"
   }, card.w), /*#__PURE__*/React.createElement("button", {
-    className: "next",
+    className: "next " + (judged.good ? "calm" : "retry"),
     onClick: go
-  }, judged.good ? "次へ" : "もう一度")));
+  }, judged.good ? "次へ →" : "🔁 もう一度")));
 }
 
 /* ── 説明の1枚 ────────────────────────
@@ -457,9 +457,9 @@ function Tutorial({
   }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement("div", {
     className: "dwhy"
   }, "\u7B54\u3048\u306F ", String(q.answer)), /*#__PURE__*/React.createElement("button", {
-    className: "next",
+    className: "next " + (judged ? "calm" : "retry"),
     onClick: again
-  }, judged ? "べつの数でもう一度" : "もう一度")));
+  }, judged ? "べつの数で もう一度 →" : "🔁 もう一度")));
 }
 function Memo({
   station,
@@ -1774,6 +1774,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .next{display:block;width:100%;padding:16px;border-radius:12px;background:#238636;
   color:#fff;font-size:17px;font-weight:700;margin-top:16px}
 .next:disabled{background:#21262d;color:#8b949e}
+/* 答え合わせのボタン。正解＝落ち着いた緑／不正解＝青の「もう一度」 */
+.next.calm{background:#0f2a16;border:1px solid #2ea043;color:#56d364}
+.next.retry{background:#132030;border:1px solid #58a6ff;color:#79c0ff}
 .mini{display:block;width:100%;min-height:44px;font-size:13px;color:#8b949e;margin-top:10px}
 
 /* テスト（表なし） */

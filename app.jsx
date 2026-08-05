@@ -244,8 +244,13 @@ function Play({ plan, onDone, onQuit }) {
             </div>
             {!judged && <div className="j-ans">答えは <b>{String(q.answer)}</b></div>}
             {judged && q.tip && <div className="j-tip">💡 {q.tip}</div>}
-            {judged ? <button className="next" onClick={() => next(results)}>次へ</button>
-              : <button className="next" onClick={retry}>もう一度</button>}
+            {/* 正解＝緑（主張は抑える）／不正解＝青の「もう一度」。
+                最後の問題だけ「結果を見る」。lpic-reflex と同じ作り */}
+            {judged
+              ? <button className="next calm" onClick={() => next(results)}>
+                  {idx + 1 >= queue.length ? "結果を見る" : "次へ →"}
+                </button>
+              : <button className="next retry" onClick={retry}>🔁 もう一度</button>}
           </div>
         </div>
       )}
@@ -322,7 +327,9 @@ function Drill({ station, onDone, onHome }) {
         <>
           <div className={"dhead " + (judged.good ? "ok" : "ng")}>{judged.good ? "✓ 正解" : "✕ 不正解"}</div>
           <div className="dwhy">{card.w}</div>
-          <button className="next" onClick={go}>{judged.good ? "次へ" : "もう一度"}</button>
+          <button className={"next " + (judged.good ? "calm" : "retry")} onClick={go}>
+            {judged.good ? "次へ →" : "🔁 もう一度"}
+          </button>
         </>
       )}
     </div>
@@ -362,7 +369,9 @@ function Tutorial({ station, goal, lead }) {
         <>
           <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
           {!judged && <div className="dwhy">答えは {String(q.answer)}</div>}
-          <button className="next" onClick={again}>{judged ? "べつの数でもう一度" : "もう一度"}</button>
+          <button className={"next " + (judged ? "calm" : "retry")} onClick={again}>
+            {judged ? "べつの数で もう一度 →" : "🔁 もう一度"}
+          </button>
         </>
       )}
     </div>
@@ -1410,6 +1419,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .next{display:block;width:100%;padding:16px;border-radius:12px;background:#238636;
   color:#fff;font-size:17px;font-weight:700;margin-top:16px}
 .next:disabled{background:#21262d;color:#8b949e}
+/* 答え合わせのボタン。正解＝落ち着いた緑／不正解＝青の「もう一度」 */
+.next.calm{background:#0f2a16;border:1px solid #2ea043;color:#56d364}
+.next.retry{background:#132030;border:1px solid #58a6ff;color:#79c0ff}
 .mini{display:block;width:100%;min-height:44px;font-size:13px;color:#8b949e;margin-top:10px}
 
 /* テスト（表なし） */
