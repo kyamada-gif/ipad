@@ -776,36 +776,49 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
           {cut > 0 && (
             <>
               <div className={"lead " + (st.zero ? "past" : "now")}>
-                ④ 線から右を、<b>ぜんぶ 0</b> にする
+                ④ <b>上の {parts[oct]} の並び</b>で、線から右を <b>ぜんぶ 0</b> にする
               </div>
               <div className="split bulk">
                 <button className={"go" + (st.zero ? " on" : "")} onClick={() => set({ zero: true })}>ぜんぶ 0</button>
                 <div className="sp-row">
                   {ipBits.map((c, i) => (
                     i < cut
-                      ? <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
+                      ? <span key={i} className={"sp-c fixed from" + (cut === i + 1 ? " edge" : "")}>{c}</span>
                       : <span key={i} className={st.zero ? "sp-c fixed done" : "sp-c blank"}>{st.zero ? 0 : ""}</span>
                   ))}
                 </div>
               </div>
+              {/* 並びと住所を、画面でつなぐ（頭の中で組み立てさせない） */}
+              {st.zero && (
+                <div className="asm">
+                  <span>この8つ ＝ <b>{keep}</b>{oct < 3 && <>　うしろは ぜんぶ <b>0</b></>}</span>
+                  <span className="asm-a">{myNet}</span>
+                </div>
+              )}
             </>
           )}
 
           {st.zero && (
             <>
               <div className={"lead " + (st.one ? "past" : "now")}>
-                ⑤ こんどは、<b>ぜんぶ 1</b> にする
+                ⑤ おなじ並びで、線から右を <b>ぜんぶ 1</b> にする
               </div>
               <div className="split bulk">
                 <button className={"go" + (st.one ? " on" : "")} onClick={() => set({ one: true })}>ぜんぶ 1</button>
                 <div className="sp-row">
                   {ipBits.map((c, i) => (
                     i < cut
-                      ? <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
+                      ? <span key={i} className={"sp-c fixed from" + (cut === i + 1 ? " edge" : "")}>{c}</span>
                       : <span key={i} className={st.one ? "sp-c fixed done" : "sp-c blank"}>{st.one ? 1 : ""}</span>
                   ))}
                 </div>
               </div>
+              {st.one && (
+                <div className="asm">
+                  <span>この8つ ＝ <b>{keep + restOnes(cut)}</b>{oct < 3 && <>　うしろは ぜんぶ <b>255</b></>}</span>
+                  <span className="asm-a">{myBc}</span>
+                </div>
+              )}
             </>
           )}
 
@@ -1422,7 +1435,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
 .sp-c.blank{border-style:dashed;background:none}
 .sp-c.done{color:#79c0ff}
+/* 線から左は、③の並びをそのまま持ってきたもの。同じ地の色で目をつなぐ */
+.sp-c.from{background:#132030;border-radius:7px}
 /* 行ごと押す段。行頭のボタンぶん、左を広くとる */
+/* 並びと住所をつなぐ行 */
+.asm{display:flex;flex-direction:column;align-items:center;gap:2px;margin:6px 0 14px;
+  font-size:13px;color:#8b949e}
+.asm b{color:#e6edf3}
+.asm-a{font-size:17px;font-weight:800;color:#79c0ff;font-family:ui-monospace,Menlo,monospace}
 .split.bulk{grid-template-columns:64px 1fr}
 .split.bulk .go{min-height:44px;font-size:13px;padding:6px 4px}
 .split.bulk .go.on{border-color:#58a6ff;background:#132030;color:#79c0ff}

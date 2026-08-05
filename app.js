@@ -978,7 +978,7 @@ function SplitBoard({
     className: "o-x"
   }, parts[oct], W8.filter((w, i) => ipBits[i]).map(w => ` − ${w}`).join(""), " \uFF1D 0"))), cut > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (st.zero ? "past" : "now")
-  }, "\u2463 \u7DDA\u304B\u3089\u53F3\u3092\u3001", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 0"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2463 ", /*#__PURE__*/React.createElement("b", null, "\u4E0A\u306E ", parts[oct], " \u306E\u4E26\u3073"), "\u3067\u3001\u7DDA\u304B\u3089\u53F3\u3092 ", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 0"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split bulk"
   }, /*#__PURE__*/React.createElement("button", {
     className: "go" + (st.zero ? " on" : ""),
@@ -989,13 +989,17 @@ function SplitBoard({
     className: "sp-row"
   }, ipBits.map((c, i) => i < cut ? /*#__PURE__*/React.createElement("span", {
     key: i,
-    className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
+    className: "sp-c fixed from" + (cut === i + 1 ? " edge" : "")
   }, c) : /*#__PURE__*/React.createElement("span", {
     key: i,
     className: st.zero ? "sp-c fixed done" : "sp-c blank"
-  }, st.zero ? 0 : ""))))), st.zero && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, st.zero ? 0 : "")))), st.zero && /*#__PURE__*/React.createElement("div", {
+    className: "asm"
+  }, /*#__PURE__*/React.createElement("span", null, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, keep), oct < 3 && /*#__PURE__*/React.createElement(React.Fragment, null, "\u3000\u3046\u3057\u308D\u306F \u305C\u3093\u3076 ", /*#__PURE__*/React.createElement("b", null, "0"))), /*#__PURE__*/React.createElement("span", {
+    className: "asm-a"
+  }, myNet))), st.zero && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (st.one ? "past" : "now")
-  }, "\u2464 \u3053\u3093\u3069\u306F\u3001", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 1"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2464 \u304A\u306A\u3058\u4E26\u3073\u3067\u3001\u7DDA\u304B\u3089\u53F3\u3092 ", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 1"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split bulk"
   }, /*#__PURE__*/React.createElement("button", {
     className: "go" + (st.one ? " on" : ""),
@@ -1006,11 +1010,15 @@ function SplitBoard({
     className: "sp-row"
   }, ipBits.map((c, i) => i < cut ? /*#__PURE__*/React.createElement("span", {
     key: i,
-    className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
+    className: "sp-c fixed from" + (cut === i + 1 ? " edge" : "")
   }, c) : /*#__PURE__*/React.createElement("span", {
     key: i,
     className: st.one ? "sp-c fixed done" : "sp-c blank"
-  }, st.one ? 1 : ""))))), (st.zero || st.one) && /*#__PURE__*/React.createElement("div", {
+  }, st.one ? 1 : "")))), st.one && /*#__PURE__*/React.createElement("div", {
+    className: "asm"
+  }, /*#__PURE__*/React.createElement("span", null, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, keep + restOnes(cut)), oct < 3 && /*#__PURE__*/React.createElement(React.Fragment, null, "\u3000\u3046\u3057\u308D\u306F \u305C\u3093\u3076 ", /*#__PURE__*/React.createElement("b", null, "255"))), /*#__PURE__*/React.createElement("span", {
+    className: "asm-a"
+  }, myBc))), (st.zero || st.one) && /*#__PURE__*/React.createElement("div", {
     className: "derive"
   }, st.zero && /*#__PURE__*/React.createElement("div", {
     className: "d-r col"
@@ -1758,7 +1766,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
 .sp-c.blank{border-style:dashed;background:none}
 .sp-c.done{color:#79c0ff}
+/* 線から左は、③の並びをそのまま持ってきたもの。同じ地の色で目をつなぐ */
+.sp-c.from{background:#132030;border-radius:7px}
 /* 行ごと押す段。行頭のボタンぶん、左を広くとる */
+/* 並びと住所をつなぐ行 */
+.asm{display:flex;flex-direction:column;align-items:center;gap:2px;margin:6px 0 14px;
+  font-size:13px;color:#8b949e}
+.asm b{color:#e6edf3}
+.asm-a{font-size:17px;font-weight:800;color:#79c0ff;font-family:ui-monospace,Menlo,monospace}
 .split.bulk{grid-template-columns:64px 1fr}
 .split.bulk .go{min-height:44px;font-size:13px;padding:6px 4px}
 .split.bulk .go.on{border-color:#58a6ff;background:#132030;color:#79c0ff}
