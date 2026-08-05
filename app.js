@@ -655,7 +655,9 @@ function SumBoard({
     className: "o-x"
   }, on.length ? on.join(" + ") : "まだ押していません"), /*#__PURE__*/React.createElement("span", {
     className: "o-n"
-  }, "\u5408\u8A08 ", /*#__PURE__*/React.createElement("b", null, v))), /*#__PURE__*/React.createElement("button", {
+  }, "\u5408\u8A08 ", /*#__PURE__*/React.createElement("b", null, v))), /*#__PURE__*/React.createElement("div", {
+    className: "point"
+  }, "\u62BC\u3057\u305F\u3068\u3053\u308D\u306E\u6570\u3092\u3001\u305C\u3093\u3076\u8DB3\u3057\u305F\u3082\u306E\u304C\u7B54\u3048\u3067\u3059"), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: () => onSubmit(v),
     disabled: locked || !v
@@ -711,7 +713,9 @@ function SubBoard({
     className: "o-x"
   }, on.length ? on.map(w => `−${w}`).join(" ") : "まだ押していません"), /*#__PURE__*/React.createElement("span", {
     className: "o-n"
-  }, "2\u9032\u6570 ", /*#__PURE__*/React.createElement("b", null, W8.map(w => v & w ? 1 : 0).join("")))), /*#__PURE__*/React.createElement("button", {
+  }, "2\u9032\u6570 ", /*#__PURE__*/React.createElement("b", null, W8.map(w => v & w ? 1 : 0).join("")))), /*#__PURE__*/React.createElement("div", {
+    className: "point"
+  }, "\u62BC\u3057\u305F\uFF08\uFF1D\u5F15\u3044\u305F\uFF09\u3068\u3053\u308D\u304C ", /*#__PURE__*/React.createElement("b", null, "1"), "\u3001\u62BC\u3057\u3066\u3044\u306A\u3044\u3068\u3053\u308D\u304C ", /*#__PURE__*/React.createElement("b", null, "0"), "\u3002 \u5DE6\u304B\u3089\u4E26\u3079\u305F\u3082\u306E\u304C2\u9032\u6570\u3067\u3059"), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: () => onSubmit(W8.map(w => v & w ? 1 : 0).join("")),
     disabled: locked || !v

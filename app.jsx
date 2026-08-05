@@ -519,6 +519,8 @@ function SumBoard({ q, value, onChange, locked, onSubmit }) {
         <span className="o-x">{on.length ? on.join(" + ") : "まだ押していません"}</span>
         <span className="o-n">合計 <b>{v}</b></span>
       </div>
+      {/* 何が起きているのかを1行 */}
+      <div className="point">押したところの数を、ぜんぶ足したものが答えです</div>
       {/* 何か押すまでは決定できない。答えは必ず 1 以上なので、合っているかどうかは漏れない */}
       <button className="next" onClick={() => onSubmit(v)} disabled={locked || !v}>これで決定</button>
     </div>
@@ -559,6 +561,11 @@ function SubBoard({ q, value, onChange, locked, onSubmit }) {
       <div className="out">
         <span className="o-x">{on.length ? on.map((w) => `−${w}`).join(" ") : "まだ押していません"}</span>
         <span className="o-n">2進数 <b>{W8.map((w) => (v & w ? 1 : 0)).join("")}</b></span>
+      </div>
+      {/* 何が起きているのかを1行。押した＝引いた＝1、押していない＝0 */}
+      <div className="point">
+        押した（＝引いた）ところが <b>1</b>、押していないところが <b>0</b>。
+        左から並べたものが2進数です
       </div>
       {/* 何か押すまでは決定できない。「残りが 0 になるまで」にはしない ──
           それだと合っているかどうかを機械が教えてしまう */}
