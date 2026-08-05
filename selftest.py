@@ -32,7 +32,7 @@ def verify(q):
     s = q["station"]
     counts[s] += 1
 
-    if q["input"] not in ("pow", "sum", "sub", "split", "pick", "stack", "mask"):
+    if q["input"] not in ("pow", "sum", "sub", "split", "pick", "stack", "mask", "wild"):
         fails.append(f'{s}  知らない盤: {q["input"]}')
     if len(q.get("steps", [])) < 2:
         fails.append(f"{s}  手順が足りない")
@@ -76,6 +76,13 @@ def verify(q):
             b += 1
         ln = min(30, base + b)
         expect(q, f"/{ln}（{ipaddress.ip_network(f'0.0.0.0/{ln}').netmask}）")
+
+    elif s == "S9":                                 # ワイルドカードマスク
+        ln = q["board"]["len"]
+        m = ipaddress.ip_network(f"0.0.0.0/{ln}").netmask
+        if g(q, "サブネットマスク") != str(m):
+            fails.append(f"S9  材料と盤が食い違う: {q['given']} / {q['board']}")
+        expect(q, ".".join(str(255 - int(x)) for x in str(m).split(".")))
 
     elif s == "S8":                                 # プレフィックス長 ↔ サブネットマスク
         ln = q["board"]["len"]
