@@ -693,8 +693,8 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
   // 線は「いちばん右の 1 のうしろ」。自分で作った 1 と 0 から決まる
   const bs = W8.map((w) => (bits & w ? 1 : 0));
   const cut = bs.lastIndexOf(1) + 1;
-  // ③で自分が押した 1 と 0。**機械は出さない**（ここを飛ばすと、この並びの出どころが分からなくなる）
-  const ipBits = W8.map((w) => ((st.ib || 0) & w ? 1 : 0));
+  // ③の 1 と 0 は機械が出す。**そのかわり、引いていく過程を下に見せる**
+  const ipBits = oct == null ? [] : bin8(parts[oct]).split("").map(Number);
 
   // 計算は gen.js の splitOut に任せる（画面と検算で同じ関数を使う）
   const d = (oct != null && cut > 0) ? splitOut(ip, oct, cut, q.goal) : null;
@@ -703,7 +703,7 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
   const myNet = oct == null ? null : addrWith(ip, oct, keep, 0);
   const myBc = oct == null ? null : addrWith(ip, oct, keep + restOnes(cut), 255);
   const out = (myNet && myBc) ? pairOut(myNet, myBc, q.goal) : "";
-  const ready = d && st.it && st.zero && st.one;
+  const ready = d && st.zero && st.one;
 
   return (
     <div className="box">
@@ -725,7 +725,7 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
           <React.Fragment key={i}>
             {i > 0 && <span className="dot">.</span>}
             <button className={"oct" + (oct === i ? " on" : "")}
-              onClick={() => set({ oct: i, bits: 0, ib: 0, it: false, zero: false, one: false })}>{m}</button>
+              onClick={() => set({ oct: i, bits: 0, zero: false, one: false })}>{m}</button>
           </React.Fragment>
         ))}
       </div>
@@ -740,7 +740,7 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
             <div className="sp-row">
               {W8.map((w, i) => (
                 <button key={w} className={"sp-c" + (bits & w ? " on" : "") + (cut === i + 1 ? " edge" : "")}
-                  onClick={() => set({ bits: bits & w ? bits - w : bits + w, ib: 0, it: false, zero: false, one: false })}>
+                  onClick={() => set({ bits: bits & w ? bits - w : bits + w, zero: false, one: false })}>
                   {bits & w ? 1 : 0}
                 </button>
               ))}
@@ -753,17 +753,14 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
               ②と同じ手つきを、数を変えてもう一度やるだけ */}
           {cut > 0 && (
             <>
-              <div className={"lead " + (st.it ? "past" : "now")}>
-                ③ <b>同じオクテット</b>の IPアドレス <b>{parts[oct]}</b> を 1 と 0 にする
+              <div className="lead past">
+                ③ <b>同じオクテット</b>の IPアドレス <b>{parts[oct]}</b> を 1 と 0 にすると
               </div>
               <div className="split">
                 <div className="sp-lab">IP<i>{parts[oct]}</i></div>
                 <div className="sp-row">
-                  {W8.map((w, i) => (
-                    <button key={w} className={"sp-c" + ((st.ib || 0) & w ? " on" : "") + (cut === i + 1 ? " edge" : "")}
-                      onClick={() => set({ ib: (st.ib || 0) ^ w, it: true, zero: false, one: false })}>
-                      {(st.ib || 0) & w ? 1 : 0}
-                    </button>
+                  {ipBits.map((c, i) => (
+                    <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
                   ))}
                 </div>
                 {/* 重みは、押すところのすぐ下に。暗算で 112 = 64+32+16 をやらせない */}
@@ -772,16 +769,15 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
               </div>
               <div className="out">
                 <span className="o-x">
-                  {parts[oct]}{W8.filter((w) => (st.ib || 0) & w).map((w) => ` − ${w}`).join("")}
+                  {parts[oct]}{W8.filter((w, i) => ipBits[i]).map((w) => ` − ${w}`).join("")} ＝ 0
                 </span>
-                <span className="o-n">残り <b>{parts[oct] - W8.reduce((a, w) => a + ((st.ib || 0) & w ? w : 0), 0)}</b></span>
               </div>
             </>
           )}
 
           {/* ④⑤ 押すのは行ごとに1回。マスごとの判断は無い（線から右は全部おなじ値）。
               判断は②③で終わっていて、ここは「何をするか」を決めるだけ */}
-          {st.it && (
+          {cut > 0 && (
             <>
               <div className={"lead " + (st.zero ? "past" : "now")}>
                 ④ 線から右を、<b>ぜんぶ 0</b> にする

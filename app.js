@@ -897,8 +897,8 @@ function SplitBoard({
   // 線は「いちばん右の 1 のうしろ」。自分で作った 1 と 0 から決まる
   const bs = W8.map(w => bits & w ? 1 : 0);
   const cut = bs.lastIndexOf(1) + 1;
-  // ③で自分が押した 1 と 0。**機械は出さない**（ここを飛ばすと、この並びの出どころが分からなくなる）
-  const ipBits = W8.map(w => (st.ib || 0) & w ? 1 : 0);
+  // ③の 1 と 0 は機械が出す。**そのかわり、引いていく過程を下に見せる**
+  const ipBits = oct == null ? [] : bin8(parts[oct]).split("").map(Number);
 
   // 計算は gen.js の splitOut に任せる（画面と検算で同じ関数を使う）
   const d = oct != null && cut > 0 ? splitOut(ip, oct, cut, q.goal) : null;
@@ -907,7 +907,7 @@ function SplitBoard({
   const myNet = oct == null ? null : addrWith(ip, oct, keep, 0);
   const myBc = oct == null ? null : addrWith(ip, oct, keep + restOnes(cut), 255);
   const out = myNet && myBc ? pairOut(myNet, myBc, q.goal) : "";
-  const ready = d && st.it && st.zero && st.one;
+  const ready = d && st.zero && st.one;
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
@@ -935,8 +935,6 @@ function SplitBoard({
     onClick: () => set({
       oct: i,
       bits: 0,
-      ib: 0,
-      it: false,
       zero: false,
       one: false
     })
@@ -955,8 +953,6 @@ function SplitBoard({
     className: "sp-c" + (bits & w ? " on" : "") + (cut === i + 1 ? " edge" : ""),
     onClick: () => set({
       bits: bits & w ? bits - w : bits + w,
-      ib: 0,
-      it: false,
       zero: false,
       one: false
     })
@@ -968,23 +964,17 @@ function SplitBoard({
     key: w,
     className: "sp-w"
   }, w)))), cut > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "lead " + (st.it ? "past" : "now")
-  }, "\u2462 ", /*#__PURE__*/React.createElement("b", null, "\u540C\u3058\u30AA\u30AF\u30C6\u30C3\u30C8"), "\u306E IP\u30A2\u30C9\u30EC\u30B9 ", /*#__PURE__*/React.createElement("b", null, parts[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "lead past"
+  }, "\u2462 ", /*#__PURE__*/React.createElement("b", null, "\u540C\u3058\u30AA\u30AF\u30C6\u30C3\u30C8"), "\u306E IP\u30A2\u30C9\u30EC\u30B9 ", /*#__PURE__*/React.createElement("b", null, parts[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B\u3068"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }, "IP", /*#__PURE__*/React.createElement("i", null, parts[oct])), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
-  }, W8.map((w, i) => /*#__PURE__*/React.createElement("button", {
-    key: w,
-    className: "sp-c" + ((st.ib || 0) & w ? " on" : "") + (cut === i + 1 ? " edge" : ""),
-    onClick: () => set({
-      ib: (st.ib || 0) ^ w,
-      it: true,
-      zero: false,
-      one: false
-    })
-  }, (st.ib || 0) & w ? 1 : 0))), /*#__PURE__*/React.createElement("div", {
+  }, ipBits.map((c, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
+  }, c))), /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }, "\u91CD\u307F"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row w"
@@ -995,9 +985,7 @@ function SplitBoard({
     className: "out"
   }, /*#__PURE__*/React.createElement("span", {
     className: "o-x"
-  }, parts[oct], W8.filter(w => (st.ib || 0) & w).map(w => ` − ${w}`).join("")), /*#__PURE__*/React.createElement("span", {
-    className: "o-n"
-  }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("b", null, parts[oct] - W8.reduce((a, w) => a + ((st.ib || 0) & w ? w : 0), 0))))), st.it && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, parts[oct], W8.filter((w, i) => ipBits[i]).map(w => ` − ${w}`).join(""), " \uFF1D 0"))), cut > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (st.zero ? "past" : "now")
   }, "\u2463 \u7DDA\u304B\u3089\u53F3\u3092\u3001", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 0"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split bulk"
