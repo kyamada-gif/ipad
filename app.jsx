@@ -342,6 +342,7 @@ function Drill({ station, onDone, onHome }) {
 /** チュートリアル1つぶん。**文章で読ませず、手を動かす。**教材の手順を盤で1段ずつたどる。 */
 function Tutorial({ station, goal, lead, onSolved }) {
   const [q] = useState(() => makeQuestion(station, 0.6, false, goal));
+  const mark = useRef(null);
   const [val, setVal] = useState(null);
   const [judged, setJudged] = useState(null);
   // 正解するまで、同じ問題をやり直す（全体で1つの決まり）
@@ -351,6 +352,14 @@ function Tutorial({ station, goal, lead, onSolved }) {
     const ok = String(out) === String(q.answer);
     setJudged(ok); buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
+    // 押した直後に、判定が目に入るようにする（スクロールしないと見えないのを防ぐ）
+    setTimeout(() => {
+      if (!mark.current) return;
+      try {
+        mark.current.scrollIntoView({ block: "center",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      } catch (e) {}
+    }, 0);
   };
   useEffect(() => { if (window.__debug) window.__q = q; }, [q]);
   const board = { q, value: val, onChange: setVal, locked: judged !== null, onSubmit: answer };
@@ -377,7 +386,7 @@ function Tutorial({ station, goal, lead, onSolved }) {
           くり返させると、どこで終わりなのか分からなくなる */}
       {judged !== null && (
         <>
-          <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
+          <div ref={mark} className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
           {!judged && (
             <>
               <div className="dwhy">答えは {String(q.answer)}</div>
@@ -484,7 +493,7 @@ function PowBoard({ q, value, onChange, locked, onSubmit }) {
   const out = sel == null ? "" : q.goal === "toValue" ? String(Math.pow(2, sel)) : String(sel);
   return (
     <div className="box">
-      <div className="point">ポイント　となりへ行くたびに <b>2倍</b></div>
+      <div className="lead now">下の表から、<b>あてはまるところ</b>を押しましょう</div>
       <div className="split">
         <div className="sp-lab">2の</div>
         <div className="sp-row">
@@ -515,7 +524,7 @@ function SumBoard({ q, value, onChange, locked, onSubmit }) {
     <div className="box">
       {/* 上の枠に書いてある数を見て、そのまま押す。
           列にそろえた写しを間に置くと、どちらを見ればいいのか迷う */}
-      <div className="point">ポイント　<b>下線の桁を押す</b>。押した数を合計すると10進数に直せる</div>
+      <div className="lead now"><b>下線の桁</b>を押しましょう。押した数を合計すると10進数になります</div>
       <div className="split">
         <div className="sp-lab">押す</div>
         <div className="row8 tight">
@@ -562,7 +571,7 @@ function SubBoard({ q, value, onChange, locked, onSubmit }) {
       <div className={"rest" + (rest === 0 ? " zero" : rest < 0 ? " over" : "")}>
         残り <b>{rest}</b>{rest < 0 && <span className="rest-n">　引きすぎ</span>}
       </div>
-      <div className="point">ポイント　<b>左から順に</b>。残りから引けるなら押す。引けなければ次へ</div>
+      <div className="lead now"><b>左から順に</b>押しましょう。残りから引けるなら押す、引けなければ次へ</div>
       <div className="row8">
         {W8.map((w, i) => (
           <button key={w}

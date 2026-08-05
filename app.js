@@ -414,6 +414,7 @@ function Tutorial({
   onSolved
 }) {
   const [q] = useState(() => makeQuestion(station, 0.6, false, goal));
+  const mark = useRef(null);
   const [val, setVal] = useState(null);
   const [judged, setJudged] = useState(null);
   // 正解するまで、同じ問題をやり直す（全体で1つの決まり）
@@ -427,6 +428,16 @@ function Tutorial({
     setJudged(ok);
     buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
+    // 押した直後に、判定が目に入るようにする（スクロールしないと見えないのを防ぐ）
+    setTimeout(() => {
+      if (!mark.current) return;
+      try {
+        mark.current.scrollIntoView({
+          block: "center",
+          behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
+        });
+      } catch (e) {}
+    }, 0);
   };
   useEffect(() => {
     if (window.__debug) window.__q = q;
@@ -456,6 +467,7 @@ function Tutorial({
   }, g.k), /*#__PURE__*/React.createElement("span", {
     className: "gv"
   }, g.v)))), q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : q.input === "wild" ? /*#__PURE__*/React.createElement(WildBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged !== null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    ref: mark,
     className: "dhead " + (judged ? "ok" : "ng")
   }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "dwhy"
@@ -594,8 +606,8 @@ function PowBoard({
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "point"
-  }, "\u30DD\u30A4\u30F3\u30C8\u3000\u3068\u306A\u308A\u3078\u884C\u304F\u305F\u3073\u306B ", /*#__PURE__*/React.createElement("b", null, "2\u500D")), /*#__PURE__*/React.createElement("div", {
+    className: "lead now"
+  }, "\u4E0B\u306E\u8868\u304B\u3089\u3001", /*#__PURE__*/React.createElement("b", null, "\u3042\u3066\u306F\u307E\u308B\u3068\u3053\u308D"), "\u3092\u62BC\u3057\u307E\u3057\u3087\u3046"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
@@ -634,8 +646,8 @@ function SumBoard({
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "point"
-  }, "\u30DD\u30A4\u30F3\u30C8\u3000", /*#__PURE__*/React.createElement("b", null, "\u4E0B\u7DDA\u306E\u6841\u3092\u62BC\u3059"), "\u3002\u62BC\u3057\u305F\u6570\u3092\u5408\u8A08\u3059\u308B\u306810\u9032\u6570\u306B\u76F4\u305B\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "lead now"
+  }, /*#__PURE__*/React.createElement("b", null, "\u4E0B\u7DDA\u306E\u6841"), "\u3092\u62BC\u3057\u307E\u3057\u3087\u3046\u3002\u62BC\u3057\u305F\u6570\u3092\u5408\u8A08\u3059\u308B\u306810\u9032\u6570\u306B\u306A\u308A\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
@@ -699,8 +711,8 @@ function SubBoard({
   }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("b", null, rest), rest < 0 && /*#__PURE__*/React.createElement("span", {
     className: "rest-n"
   }, "\u3000\u5F15\u304D\u3059\u304E")), /*#__PURE__*/React.createElement("div", {
-    className: "point"
-  }, "\u30DD\u30A4\u30F3\u30C8\u3000", /*#__PURE__*/React.createElement("b", null, "\u5DE6\u304B\u3089\u9806\u306B"), "\u3002\u6B8B\u308A\u304B\u3089\u5F15\u3051\u308B\u306A\u3089\u62BC\u3059\u3002\u5F15\u3051\u306A\u3051\u308C\u3070\u6B21\u3078"), /*#__PURE__*/React.createElement("div", {
+    className: "lead now"
+  }, /*#__PURE__*/React.createElement("b", null, "\u5DE6\u304B\u3089\u9806\u306B"), "\u62BC\u3057\u307E\u3057\u3087\u3046\u3002\u6B8B\u308A\u304B\u3089\u5F15\u3051\u308B\u306A\u3089\u62BC\u3059\u3001\u5F15\u3051\u306A\u3051\u308C\u3070\u6B21\u3078"), /*#__PURE__*/React.createElement("div", {
     className: "row8"
   }, W8.map((w, i) => /*#__PURE__*/React.createElement("button", {
     key: w
