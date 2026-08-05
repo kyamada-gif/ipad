@@ -17,7 +17,7 @@ const fs = require("fs");
 const path = require("path");
 const { JSDOM } = require(path.join(__dirname, "node_modules/jsdom"));
 // ステージの一覧などは、画面の中（eval の中）からは取り出せないので、そのまま読み込む
-const { STATIONS, CARDS, bin8, cutOct, cutBit, maskStr } = require(path.join(__dirname, "..", "gen.js"));
+const { STATIONS, bin8, cutOct, cutBit, maskStr } = require(path.join(__dirname, "..", "gen.js"));
 
 const tick = () => new Promise((r) => setTimeout(r, 0));
 /** 条件がそろうまで待つ。決め打ちの秒数だと、機械の速さで結果が変わってしまう。 */
@@ -218,53 +218,11 @@ async function miss(h) {
     check(h.$(".mtitle"), `${st.id}: 説明の1枚が出ない`);
     check(h.$$(".how").length === 1, `${st.id}: 説明が1行でない（${h.$$(".how").length} 行）`);
     check(h.$$(".dtr").length > 0, `${st.id}: 説明の1枚に表も例も出ていない`);
-    check(h.$$(".gotest button").length === (CARDS[st.id] ? 2 : 1), `${st.id}: 入口の数が違う`);
+    check(h.$$(".gotest button").length === 2, `${st.id}: 入口が2つ出ていない`);
     check(!h.$(".box"), `${st.id}: 説明の1枚に盤が残っている`);
     note("説明: " + h.txt(".how"));
 
     // 覚える表があるステージだけ、暗記ドリルを見る
-    if (CARDS[st.id]) {
-      h.click(h.$$(".gotest button")[0]); await waitFor(() => h.$(".drill"), 4000);
-      const cards = CARDS[st.id];
-      check(h.$(".dcard"), `${st.id}: 合図のカードが出ない`);
-      check(h.$$(".dopt").length === 4, `${st.id}: 4択になっていない（${h.$$(".dopt").length}）`);
-      check(!h.$(".dtable"), `${st.id}: ドリルに覚える表が出ている`);
-      check(!h.$(".calc"), `${st.id}: ドリルに電卓が出ている`);
-      note(`ドリル: ${cards.length} 枚 ／ 4択 ／ 合図「${h.txt(".dcard")}」`);
-      // わざと外す → 正解が示され、式が出て、そのカードは山に残る
-      {
-        const cue = h.txt(".dcard"), want = cards.find((c) => c.q === cue);
-        const wrong = h.$$(".dopt").find((e) => e.textContent.trim() !== want.a);
-        if (wrong) {
-          h.click(wrong); await tick();
-          check(h.$(".dhead.ng") && h.$(".dopt.right"), `${st.id}: 外したとき、正解が示されない`);
-          check(h.txt(".dwhy"), `${st.id}: 式が出ない`);
-          note("    外したとき: " + h.txt(".dwhy"));
-          h.click(h.$$("button").find((b) => b.textContent.includes("もう一度")));
-          await waitFor(() => !h.$(".dhead"), 2000);
-          // 正解するまで、同じ問題から進まない
-          check(h.txt(".dcard") === cue, `${st.id}: 外しても次の問題へ進んでしまう`);
-          check(h.txt(".pnum").startsWith("0/"), `${st.id}: 外したのに進み具合が増えている`);
-          note("    外しても同じ問題のまま（正しい）");
-        }
-      }
-      let guard = 0;
-      while (h.$(".drill") && guard++ < 200) {
-        const cue = h.txt(".dcard"), want = cards.find((c) => c.q === cue);
-        check(want, `${st.id}: 知らない合図「${cue}」`);
-        if (!want) break;
-        const b2 = h.$$(".dopt").find((e) => e.textContent.trim() === want.a);
-        check(b2, `${st.id}: 正しい答えが選べない（${want.a}）`);
-        if (!b2) break;
-        h.click(b2); await tick();
-        check(h.$(".dopt.ok"), `${st.id}: 正しく選んでも正解にならない`);
-        await waitFor(() => !h.$(".dopt.ok") || !h.$(".drill"), 3000);
-      }
-      await waitFor(() => h.$(".sheet-p"), 3000).catch(() => {});
-      check(h.$(".sheet-p"), `${st.id}: 覚え終わっても説明の1枚に戻らない`);
-      note("    全部言えて、説明の1枚に戻った");
-    }
-
     // つぎにテスト
     prog[st.id] = { seen: 10, correct: 10, lit: true, solo: false };
     h = await boot(prog); await tick();

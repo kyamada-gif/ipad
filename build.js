@@ -56,7 +56,7 @@ for (const s of STATIONS) {
 // ── 盤の検査 ──
 // 「正しく操作したら、その問題の答えになるか」。
 // 画面と検算が同じ関数（splitOut / pickOut / stackOut）を使っているので、ここで確かめられる。
-const { splitOut, pickOut, stackOut, maskBoardOut, cutOct, cutBit, bin8, maskStr } = require("./gen.js");
+const { splitOut, pickOut, stackOut, maskBoardOut, addrWith, pairOut, cutOct, cutBit, bin8, maskStr } = require("./gen.js");
 const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
 let boards = 0;
 for (const s of STATIONS) {
@@ -74,7 +74,14 @@ for (const s of STATIONS) {
       if (rest !== 0) bad.push(`${s.id}: 引ききれない（残り ${rest}）`);
       out = got;
     } else if (q.input === "split") {
-      out = splitOut(q.board.ip, cutOct(q.board.len), cutBit(q.board.len), q.goal).out;
+      // **画面と同じ道すじ**で確かめる。押した 1 と 0 から住所を組み立てて、答えに一致するか。
+      // splitOut だけを見ていたので、うしろのオクテットを埋め忘れたバグを見逃していた
+      const len = q.board.len, oc = cutOct(len), cb = cutBit(len);
+      const W = [128, 64, 32, 16, 8, 4, 2, 1];
+      const ipb = bin8(Number(q.board.ip.split(".")[oc])).split("").map(Number);
+      const keep = ipb.slice(0, cb).reduce((a, c, j) => a + (c ? W[j] : 0), 0);
+      const rest = 255 - (256 - Math.pow(2, 8 - cb));
+      out = pairOut(addrWith(q.board.ip, oc, keep, 0), addrWith(q.board.ip, oc, keep + rest, 255), q.goal);
     } else if (q.input === "pick") {
       const bits = q.goal === "host" ? 32 - Number(q.answer.match(/\/(\d+)/)[1])
         : Number(q.answer.match(/\/(\d+)/)[1]) - q.base;
@@ -130,6 +137,7 @@ for (const m of src.matchAll(/["`]\s+([a-z][a-z0-9-]*)["`]/g)) { /* 条件付き
 for (const m of src.matchAll(/,\s*"([a-z][a-z0-9-]*)"\)\}/g)) used.add(m[1]);  /* key(…, "op") の形 */
 for (const m of src.matchAll(/\?\s*"([a-z][a-z0-9-]*)"\s*:\s*""/g)) used.add(m[1]);  /* 条件で付け外しするクラス */
 for (const m of src.matchAll(/\?\s*"([a-z][a-z0-9-]*)"\s*:\s*"([a-z][a-z0-9-]*)"/g)) { used.add(m[1]); used.add(m[2]); }
+for (const m of src.matchAll(/\?\s*"([a-z][a-z0-9- ]*)"\s*:\s*"([a-z][a-z0-9- ]*)"/g)) { for (const c of (m[1] + " " + m[2]).split(/\s+/)) if (c) used.add(c); }
 const defined = new Set();
 for (const m of cssBody.matchAll(/\.([a-z][a-z0-9-]*)/g)) defined.add(m[1]);
 const noStyle = [...used].filter((c) => !defined.has(c) && !["wrap", "auto", "smooth"].includes(c));

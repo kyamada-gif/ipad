@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 /*
  * IPアドレスの計算（試作2）
@@ -14,7 +14,7 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
  *
  * ■ 画面
  *   ホーム（7ステージの道）→ 練習（5問）→ 結果
- *   押すボタンはホームに「つづける」1つ。何をやるかはアプリが決める。
+ *   トップ画面にステージの札が並ぶ。札を押すと、そのステージの入口が開く。
  */
 
 const DRILL_QN = 5;     // 練習は5問（手を動かして慣れる場）
@@ -42,8 +42,6 @@ const byId = (id) => STATIONS.find((s) => s.id === id);
 const isLit = (p, id) => !!(p[id] && p[id].lit);
 const isSolo = (p, id) => !!(p[id] && p[id].solo);
 const isOpen = (p, st) => st.need.every((n) => isLit(p, n));
-/** カードを混ぜる。順番で覚えてしまわないように */
-const shuffleCards = (a) => { const x = a.slice(); for (let i = x.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [x[i], x[j]] = [x[j], x[i]]; } return x; };
 const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 const toTop = (y) => { try { window.scrollTo(0, y || 0); } catch (e) {} };
 const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -146,7 +144,7 @@ function Play({ plan, onDone, onQuit }) {
   useEffect(() => { setVal(null); startedAt.current = Date.now(); toTop(); }, [idx]);
   useEffect(() => { if (window.__debug) window.__q = q; }, [q]);
   useEffect(() => {
-    if (judged === false && why.current) {
+    if (judged !== null && why.current) {
       why.current.scrollIntoView({ block: "nearest",
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
     }
@@ -181,7 +179,7 @@ function Play({ plan, onDone, onQuit }) {
   const board = { q, value: val, onChange: setVal, locked: judged !== null, onSubmit: answer };
 
   return (
-    <div className={"wrap play" + (judged === null ? "" : judged ? " lit-ok" : " lit-ng")}>
+    <div className="wrap play">
       <div className="topbar">
         <button className="x" onClick={() => onQuit(results)}>✕</button>
         <div className="pbar"><div className="pbar-in" style={{ width: (doneScored / scored) * 100 + "%" }} /></div>
@@ -189,7 +187,7 @@ function Play({ plan, onDone, onQuit }) {
       </div>
 
       {/* いちばん上に、**今回あつかう数**をそのままの形で置く。
-          盤の中では列ごとにばらけるので、ここが「問いが何を指しているか」の拠りどころになる */}
+          盤の中にも同じ数が並ぶが、**これは問題の提示**なので消さない */}
       <div className="given">
         {q.given.map((g, i) => (
           <div key={i} className="grow"><span className="gk">{g.k}</span>
@@ -208,130 +206,47 @@ function Play({ plan, onDone, onQuit }) {
 
       {plan.test && <div className="testnote">覚えた表を思い出して答えます</div>}
 
-      {plan.test ? <TestBoard {...board} />
-        : q.input === "pow" ? <PowBoard {...board} />
-        : q.input === "mask" ? <MaskBoard {...board} />
-        : q.input === "sum" ? <SumBoard {...board} />
-        : q.input === "sub" ? <SubBoard {...board} />
+      {/* ── 答え合わせ ──────────────────────────────────
+          lpic-reflex と同じ作り。**盤ごと1枚のカードにして、その中で答え合わせをする。**
+          枠の色が変わり、外したときはカードごと揺れる。画面の外に出ないよう、
+          押した直後にここまで自動で送る。 */}
+      <div className={"card" + (judged === null ? "" : judged ? " ok" : " ng")} ref={why}>
+        {plan.test ? <TestBoard {...board} />
+          : q.input === "pow" ? <PowBoard {...board} />
+          : q.input === "mask" ? <MaskBoard {...board} />
+          : q.input === "sum" ? <SumBoard {...board} />
+          : q.input === "sub" ? <SubBoard {...board} />
           : q.input === "split" ? <SplitBoard {...board} />
-            : q.input === "pick" ? <PickBoard {...board} />
-              : <StackBoard {...board} />}
+          : q.input === "pick" ? <PickBoard {...board} />
+          : q.input === "wild" ? <WildBoard {...board} />
+          : <StackBoard {...board} />}
 
-      {judged === false && (
-        <div className="why" ref={why}>
-          <div className="why-h">こう解く</div>
-          {q.steps.map((s, i) => (
-            <div key={i} className="step">
-              <span className="step-n">{i + 1}</span>
-              <span className="step-t">{s.t}</span>
-              <span className="step-v">{s.v}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-
-      {/* ── 答え合わせの帯 ──────────────────────────────────
-          いちばん下に貼り付ける。決定ボタンを押した直後、目も指も画面の下にあるので
-          必ず目に入る。前は本文の流れの中に出していたので、スマホでは画面の外に落ちていた。
-          色だけに頼らず ✓✕ の形も出す（色の見え方は人によって違う）。 */}
-      {judged !== null && (
-        <div className={"judge" + (judged ? " ok" : " ng") + (judged ? "" : " shake")}>
-          <div className="j-in">
-            <div className="j-head">
-              <span className="j-mark">{judged ? "✓" : "✕"}</span>
-              <span className="j-word">{judged ? "正解" : "不正解"}</span>
-            </div>
+        {judged !== null && (
+          <div className="verdict">
+            <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
             {!judged && <div className="j-ans">答えは <b>{String(q.answer)}</b></div>}
             {judged && q.tip && <div className="j-tip">💡 {q.tip}</div>}
-            {/* 正解＝緑（主張は抑える）／不正解＝青の「もう一度」。
-                最後の問題だけ「結果を見る」。lpic-reflex と同じ作り */}
+            {/* 丸暗記させるステージでは、手順を出さない。答えだけでよい */}
+            {judged === false && !q.memorize && (
+              <div className="why">
+                <div className="why-h">こう解く</div>
+                {q.steps.map((st2, i) => (
+                  <div key={i} className="step">
+                    <span className="step-n">{i + 1}</span>
+                    <span className="step-t">{st2.t}</span>
+                    <span className="step-v">{st2.v}</span>
+                  </div>
+                ))}
+              </div>
+            )}
             {judged
               ? <button className="next calm" onClick={() => next(results)}>
                   {idx + 1 >= queue.length ? "結果を見る" : "次へ →"}
                 </button>
               : <button className="next retry" onClick={retry}>🔁 もう一度</button>}
           </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ── 暗記ドリル（練習）───────────────────────────────────
-   **導出ではなく想起。**盤も電卓も出さない。合図を1つ大きく出して、
-   同じ集合・同じ並びから選ばせる。場所の記憶が思い出す助けになる。
-   1周目は表を見てよい。2周目からは表を畳む。
-   間違えたカードは山に戻る。**全部を表なしで即答できたら終わり。** */
-function Drill({ station, onDone, onHome }) {
-  const cards = CARDS[station];
-  const [pile] = useState(() => shuffleCards(cards));
-  const [i, setI] = useState(0);
-  const [judged, setJudged] = useState(null);
-  const t = useRef(null);
-  useEffect(() => () => clearTimeout(t.current), []);
-
-  const card = pile[i];
-  // 外れは**その表の中の近いもの**から3つ。でたらめだと消去法で当たってしまう
-  const opts = useMemo(() => {
-    if (!card) return [];
-    const k = cards.findIndex((c) => c.q === card.q);
-    const near = [];
-    // 台数のステージだけ、「−2 を忘れた数」を必ず1つ混ぜる（本番の外れと同じ作り）
-    const m = card.a.match(/^(\d+) 台$/);
-    if (m) near.push(`${Number(m[1]) + 2} 台`);
-    for (const d of [1, -1, 2, -2, 3, -3, 4, -4]) {
-      const c = cards[k + d];
-      if (c && c.a !== card.a && !near.includes(c.a)) near.push(c.a);
-      if (near.length >= 3) break;
-    }
-    return shuffleCards([card.a].concat(near.slice(0, 3)));
-  }, [card && card.q]);
-
-  const pick = (a) => {
-    if (judged !== null || !card) return;
-    setJudged({ good: a === card.a, picked: a });
-    buzz(a === card.a ? 30 : 60);
-  };
-  // 自動では進まない。**必ず答え合わせを挟む**（読む間を機械が奪わない）
-  const go = () => {
-    if (!judged) return;
-    if (judged.good) { setJudged(null); if (i + 1 >= pile.length) onDone(); else setI(i + 1); }
-    else setJudged(null);   // 正解するまで、同じ問題から進まない
-  };
-
-  if (!card) return null;
-  const done = i;   // 正解したぶんだけ進む
-  return (
-    <div className="wrap drill">
-      <div className="topbar">
-        <button className="x" onClick={onHome}>✕</button>
-        <div className="pbar"><div className="pbar-in" style={{ width: (done / cards.length) * 100 + "%" }} /></div>
-        <div className="pnum">{done}/{cards.length}</div>
+        )}
       </div>
-      <div className="dcard">{card.q}</div>
-      {/* 答え合わせのあとも、選択肢はそのまま残す。
-          正解がどれで、自分がどれを押したのかを、同じ場所で見せる */}
-      <div className={"dopts" + (judged && !judged.good ? " shake" : "")}>
-        {opts.map((a) => (
-          <button key={a}
-            className={"dopt" + (judged && a === card.a ? " right" : "")
-              + (judged && judged.picked === a && a !== card.a ? " ng" : "")}
-            onClick={() => pick(a)}>
-            <span>{a}</span>
-            {judged && judged.picked === a && a !== card.a && <i>あなたの答え</i>}
-          </button>
-        ))}
-      </div>
-      {judged && (
-        <>
-          <div className={"dhead " + (judged.good ? "ok" : "ng")}>{judged.good ? "✓ 正解" : "✕ 不正解"}</div>
-          <div className="dwhy">{card.w}</div>
-          <button className={"next " + (judged.good ? "calm" : "retry")} onClick={go}>
-            {judged.good ? "次へ →" : "🔁 もう一度"}
-          </button>
-        </>
-      )}
     </div>
   );
 }
@@ -367,34 +282,34 @@ function Tutorial({ station, goal, lead, onSolved }) {
     <div className="tut">
       {lead && <div className="tut-h">{lead}</div>}
       {/* ここが「失敗してよい場所」だと分かる1行。断り書きの見た目は既存のまま */}
-      <div className="testnote">まずは1問、手を動かしてやってみます（採点しません）</div>
+      <div className="testnote">まずは1問、手を動かしてやってみます</div>
       <div className="prompt">{q.prompt}</div>
       <div className="given">
         {q.given.map((g, i) => (
           <div key={i} className="grow"><span className="gk">{g.k}</span><span className="gv">{g.v}</span></div>
         ))}
       </div>
-      {q.input === "pow" ? <PowBoard {...board} />
-        : q.input === "mask" ? <MaskBoard {...board} />
-        : q.input === "sum" ? <SumBoard {...board} />
-        : q.input === "sub" ? <SubBoard {...board} />
-        : q.input === "split" ? <SplitBoard {...board} />
-        : q.input === "pick" ? <PickBoard {...board} />
-        : q.input === "wild" ? <WildBoard {...board} />
-        : <StackBoard {...board} />}
-      {/* チュートリアルは1問だけ。正解したら、次にやることは下の「練習をする」だけ。
-          くり返させると、どこで終わりなのか分からなくなる */}
-      {judged !== null && (
-        <>
-          <div ref={mark} className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
-          {!judged && (
-            <>
-              <div className="dwhy">答えは {String(q.answer)}</div>
-              <button className="next retry" onClick={again}>🔁 もう一度</button>
-            </>
-          )}
-        </>
-      )}
+      <div className={"card" + (judged === null ? "" : judged ? " ok" : " ng")} ref={mark}>
+        {q.input === "pow" ? <PowBoard {...board} />
+          : q.input === "mask" ? <MaskBoard {...board} />
+          : q.input === "sum" ? <SumBoard {...board} />
+          : q.input === "sub" ? <SubBoard {...board} />
+          : q.input === "split" ? <SplitBoard {...board} />
+          : q.input === "pick" ? <PickBoard {...board} />
+          : q.input === "wild" ? <WildBoard {...board} />
+          : <StackBoard {...board} />}
+        {judged !== null && (
+          <div className="verdict">
+            <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
+            {!judged && (
+              <>
+                <div className="j-ans">答えは <b>{String(q.answer)}</b></div>
+                <button className="next retry" onClick={again}>🔁 もう一度</button>
+              </>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   );
 }
@@ -408,12 +323,71 @@ function Memo({ station, onDrill, onTest, onHome }) {
   return (
     <div className="wrap sheet-p">
       <div className="topbar"><button className="x" onClick={onHome}>✕</button></div>
+      <div className="mkind">チュートリアル</div>
       <div className="mtitle">{st.no}　{st.name}</div>
+      <div className="msub2">このステージの解き方を、1問やって覚えます</div>
       {/* 前のステージで覚えた何を、ここでそのまま使うのか。必ず通る場所に1行だけ */}
       {LINK[station] && <div className="link1">{LINK[station]}</div>}
 
       {/* 言葉は1行だけ。あとは**そのステージで覚えるもの**を見て、そのまま覚える */}
       <div className="how">{HOW[station]}</div>
+      {/* ステージ4だけ、操作の前に「1 は何なのか」を図で1枚。
+          これが無いと、なぜ 1 を左から並べるのかが宙に浮く */}
+      {station === "S8" && (
+        <>
+          <div className="how">
+            IPアドレスは 0 と 1 が 32個。<b>前半がネットワーク部</b>（どのネットワークか）、
+            <b>後半がホスト部</b>（その中のどの機械か）です。
+          </div>
+          <div className="figure">
+            <div className="fig-h"><span className="fig-n">ネットワーク部（1 が 28個）</span><span className="fig-o">ホスト部（0）</span></div>
+            <div className="fig-b">
+              <span className="fig-1">11111111</span><span className="fig-d">.</span>
+              <span className="fig-1">11111111</span><span className="fig-d">.</span>
+              <span className="fig-1">11111111</span><span className="fig-d">.</span>
+              <span className="fig-1">1111</span><span className="fig-l" /><span className="fig-0">0000</span>
+            </div>
+            <div className="fig-b">
+              <span className="fig-v">255</span><span className="fig-d">.</span>
+              <span className="fig-v">255</span><span className="fig-d">.</span>
+              <span className="fig-v">255</span><span className="fig-d">.</span>
+              <span className="fig-v">240</span>
+            </div>
+            <div className="fig-c">線 ＝ /28</div>
+          </div>
+          <div className="how">
+            点で区切られた <b>4つのかたまり</b>を、それぞれ <b>オクテット</b> といいます（1つ 8個ぶん）。
+          </div>
+          <div className="how">
+            /28 は「線が先頭から 28個目」。サブネットマスクは、ネットワーク部を 1・ホスト部を 0 にして
+            10進数で書いたもの。<b>同じ線の、2つの書き方</b>です。
+          </div>
+        </>
+      )}
+
+      {/* ステージ5だけ、操作の前に「2つの住所が何なのか」を図で1枚 */}
+      {station === "S3" && (
+        <div className="figure">
+          <div className="fig-h"><span className="fig-n">ネットワーク部</span><span className="fig-o">ホスト部</span></div>
+          <div className="fig-b">
+            <span className="fig-lab">IP 135</span>
+            <span className="fig-1">100</span><span className="fig-l" /><span className="fig-0">00111</span>
+          </div>
+          <div className="fig-b">
+            <span className="fig-lab">ぜんぶ 0</span>
+            <span className="fig-1">100</span><span className="fig-l" /><span className="fig-0">00000</span>
+            <span className="fig-r">→ …10.128</span>
+          </div>
+          <div className="fig-c ntw">↑ いちばん小さい数 ＝ ネットワークアドレス</div>
+          <div className="fig-b">
+            <span className="fig-lab">ぜんぶ 1</span>
+            <span className="fig-1">100</span><span className="fig-l" /><span className="fig-0">11111</span>
+            <span className="fig-r">→ …10.159</span>
+          </div>
+          <div className="fig-c ntw">↑ いちばん大きい数 ＝ ブロードキャストアドレス</div>
+        </div>
+      )}
+
       {/* ここがチュートリアル。読むのではなく、1問を最後まで手で解く。
           向きが2つあるステージは、**両方を並べて**見せる */}
       {station === "S8" ? (
@@ -439,7 +413,7 @@ function Memo({ station, onDrill, onTest, onHome }) {
 }
 
 /** 桁の重み表。教材の「2進数の桁の重みの表」そのまま。押せない（見るだけ）。 */
-function WeightTable() {
+function WeightTable({ blank }) {
   return (
     <div className="split wtable">
       <div className="sp-lab">2の</div>
@@ -448,7 +422,12 @@ function WeightTable() {
       </div>
       <div className="sp-lab" />
       <div className="sp-row">
-        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed big2">{Math.pow(2, n)}</span>)}
+        {/* テストでは下の段を空にする。数は頭から出す。
+            枠だけは残す（何も無いと表に見えず、何を思い出すのか分からない）。
+            破線＝「空きで、ここに入る」は、バッジの空き枠と同じ約束 */}
+        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => (
+          <span key={n} className={blank ? "sp-c blank" : "sp-c fixed big2"}>{blank ? "" : Math.pow(2, n)}</span>
+        ))}
       </div>
     </div>
   );
@@ -491,22 +470,29 @@ function PowBoard({ q, value, onChange, locked, onSubmit }) {
   const rows = [7, 6, 5, 4, 3, 2, 1, 0];
   const sel = value;
   const out = sel == null ? "" : q.goal === "toValue" ? String(Math.pow(2, sel)) : String(sel);
+  const toPower = q.goal === "toPower";
   return (
     <div className="box">
-      <div className="lead now">下の表から、<b>あてはまるところ</b>を押しましょう</div>
+      {/* **押す先が答えそのもの**でないと、対応を覚えることにならない。
+          「2の7乗は？」なら 128 を押す。「128 は2の何乗？」なら 7乗 を押す */}
+      <div className="lead now">下の表から、<b>答えの数字</b>を押しましょう</div>
       <div className="split">
         <div className="sp-lab">2の</div>
         <div className="sp-row">
           {rows.map((n) => (
-            <button key={n} className={"sp-c" + (sel === n ? " on" : "")}
-              onClick={() => !locked && onChange(n)}>{n}乗</button>
+            toPower
+              ? <button key={n} className={"sp-c" + (sel === n ? " on" : "")}
+                  onClick={() => !locked && onChange(n)}>{n}乗</button>
+              : <span key={n} className="sp-c fixed">{n}乗</span>
           ))}
         </div>
         <div className="sp-lab" />
         <div className="sp-row">
           {rows.map((n) => (
-            <button key={n} className={"sp-c big2" + (sel === n ? " on" : "")}
-              onClick={() => !locked && onChange(n)}>{Math.pow(2, n)}</button>
+            toPower
+              ? <span key={n} className="sp-c fixed big2">{Math.pow(2, n)}</span>
+              : <button key={n} className={"sp-c big2" + (sel === n ? " on" : "")}
+                  onClick={() => !locked && onChange(n)}>{Math.pow(2, n)}</button>
           ))}
         </div>
       </div>
@@ -514,7 +500,6 @@ function PowBoard({ q, value, onChange, locked, onSubmit }) {
     </div>
   );
 }
-
 /* ── 盤① 写して足す（1ステージ） ────────────────────────────────
    盤は空から始める。上の2進数を見て写す。押した重みが足されていく。 */
 function SumBoard({ q, value, onChange, locked, onSubmit }) {
@@ -584,11 +569,13 @@ function SubBoard({ q, value, onChange, locked, onSubmit }) {
         ))}
       </div>
       <div className="out">
-        <span className="o-x">{on.length ? on.map((w) => `−${w}`).join(" ") : "まだ押していません"}</span>
+        <span className="o-x">
+          {on.length ? `${q.target} ${on.map((w) => `− ${w}`).join(" ")}` : "まだ押していません"}
+        </span>
       </div>
       {/* 引き算の式と、2進数の並びを**つなぐ**1行。ここが飛ぶと、なぜ2進数になるのか分からない */}
       <div className="bridge">
-        <span className="b-t">引いたところに <b>1</b>、引かなかったところに <b>0</b> を置くと</span>
+        <span className="b-t">引けたところに <b>1</b>、引けなかったところに <b>0</b> を置くと</span>
         <span className="b-a">↓</span>
       </div>
       <div className="out">
@@ -614,7 +601,6 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
   const full = st.full || 0, bits = st.bits || 0;
   const set = (x) => !locked && onChange({ ...st, ...x });
   const d = maskBoardOut(full, bits, q.goal);       // 計算は gen.js に任せる
-  const rest = q.goal === "toMask" ? q.board.len - full * 8 : null;
 
   return (
     <div className="box">
@@ -633,7 +619,7 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
         ))}
       </div>
       <div className="dots ticks">
-        <span className="d-lab" />
+        <span className="d-lab">1の数</span>
         {[8, 16, 24, 32].map((t, i) => (
           <React.Fragment key={t}>
             {i > 0 && <span className="dot"> </span>}
@@ -642,10 +628,16 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
         ))}
       </div>
 
-      {full < 4 && (
+      {/* ②は、①を1つでも押してから出す。
+          8 で割り切れるときは押すところを出さず、「0 のまま」と言い切る */}
+      {full >= 1 && q.goal === "toMask" && q.board.rest === 0 ? (
+        <div className="sub">② あまりは 0個 → のこりは <b>0 のまま</b></div>
+      ) : full >= 1 && full < 4 && (
         <>
           <div className={"lead " + (bits ? "past" : "now")}>
-            ② のこり{rest != null && rest > 0 ? <> <b>{rest} 個</b></> : null}の <b>1</b> を、左から順に置く
+            {q.goal === "toMask"
+              ? <>② あまりの <b>{q.board.rest} 個</b> を、左から <b>1</b> に</>
+              : <>② <b>255 でない数</b>を、1 と 0 で作る</>}
           </div>
           <div className="split">
             <div className="sp-lab" />
@@ -657,8 +649,15 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
                 </button>
               ))}
             </div>
-            <div className="sp-lab" />
+            <div className="sp-lab">重み</div>
             <div className="sp-row w">{W8.map((w) => <span key={w} className="sp-w">{w}</span>)}</div>
+          </div>
+          {/* ステージ3と同じ形で、引いていくようすを見せる（暗算をさせない） */}
+          <div className="out">
+            <span className="o-x">
+              {mask[oct]}{W8.filter((w) => bits & w).map((w) => ` − ${w}`).join("")}
+            </span>
+            <span className="o-n">残り <b>{mask[oct] - W8.reduce((a, w) => a + (bits & w ? w : 0), 0)}</b></span>
           </div>
         </>
       )}
@@ -694,29 +693,39 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
   // 線は「いちばん右の 1 のうしろ」。自分で作った 1 と 0 から決まる
   const bs = W8.map((w) => (bits & w ? 1 : 0));
   const cut = bs.lastIndexOf(1) + 1;
-  const ipBits = oct == null ? [] : bin8(parts[oct]).split("").map(Number);
+  // ③で自分が押した 1 と 0。**機械は出さない**（ここを飛ばすと、この並びの出どころが分からなくなる）
+  const ipBits = W8.map((w) => ((st.ib || 0) & w ? 1 : 0));
 
   // 計算は gen.js の splitOut に任せる（画面と検算で同じ関数を使う）
   const d = (oct != null && cut > 0) ? splitOut(ip, oct, cut, q.goal) : null;
-  const out = (myNet && myBc) ? pairOut(myNet, myBc, q.goal) : "";
-  // 押した 1 と 0 から、そのまま住所にする。計算は gen.js の addrWith
+  // 押した 1 と 0 から、そのまま住所にする。計算は gen.js の addrWith / pairOut
   const keep = oct == null ? 0 : ipBits.slice(0, cut).reduce((a2, c, i) => a2 + (c ? W8[i] : 0), 0);
-  const myNet = oct == null ? null : addrWith(ip, oct, keep + (st.zb || 0));
-  const myBc = oct == null ? null : addrWith(ip, oct, keep + (st.ob || 0));
-  const ready = d && st.zero && st.one;
+  const myNet = oct == null ? null : addrWith(ip, oct, keep, 0);
+  const myBc = oct == null ? null : addrWith(ip, oct, keep + restOnes(cut), 255);
+  const out = (myNet && myBc) ? pairOut(myNet, myBc, q.goal) : "";
+  const ready = d && st.it && st.zero && st.one;
 
   return (
     <div className="box">
-      {/* はじめに出すのは、見出しと**押せるマスクの行だけ**。
-          IP の行は③に進むまで意味を持たないので、そこまで出さない */}
-      <div className={"lead " + (oct != null ? "past" : "now")}>① サブネットマスクを左から見て、<b>255 でない数</b>を押す</div>
+      {/* 問題の数は、この盤の中で見せる（材料の枠と二重にしない）。
+          押すのはサブネットマスクの行だけ。IPアドレスは平らな文字 */}
       <div className="dots">
-        <span className="d-lab">サブネット<br />マスク</span>
+        <span className="d-lab">IP</span>
+        {parts.map((v, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span className="dot">.</span>}
+            <span className={"num" + (oct === i ? " on" : "")}>{v}</span>
+          </React.Fragment>
+        ))}
+      </div>
+      <div className={"lead " + (oct != null ? "past" : "now")}>① サブネットマスクを左から見て、<b>はじめて 255 でなくなる数</b>を押す</div>
+      <div className="dots">
+        <span className="d-lab">マスク</span>
         {mask.map((m, i) => (
           <React.Fragment key={i}>
             {i > 0 && <span className="dot">.</span>}
             <button className={"oct" + (oct === i ? " on" : "")}
-              onClick={() => set({ oct: i, bits: 0, zero: false, one: false })}>{m}</button>
+              onClick={() => set({ oct: i, bits: 0, ib: 0, it: false, zero: false, one: false })}>{m}</button>
           </React.Fragment>
         ))}
       </div>
@@ -724,78 +733,101 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
 
       {oct != null && (
         <>
-          {/* 255 でないところを見つけたら、IP の同じところも一緒に見る。
-              マスクと IP を離して置くと、同じ場所の話だと分からなくなる */}
-          <div className="dots">
-            <span className="d-lab">IPアドレス</span>
-            {parts.map((v, i) => (
-              <React.Fragment key={i}>
-                {i > 0 && <span className="dot">.</span>}
-                <span className={"num" + (oct === i ? " on" : "")}>{v}</span>
-              </React.Fragment>
-            ))}
-          </div>
-
           {/* マスクを 1 と 0 にするのは自分。IP の 1 と 0 は、その真下に並べて出す */}
-          <div className={"lead " + (cut > 0 ? "past" : "now")}>② <b>{mask[oct]}</b> を 1 と 0 にする</div>
+          <div className={"lead " + (cut > 0 ? "past" : "now")}>② サブネットマスクの <b>{mask[oct]}</b> を 1 と 0 にする</div>
           <div className="split">
-            <div className="sp-lab">サブネット<i>{W8.reduce((a, w) => a + (bits & w ? w : 0), 0)}</i></div>
+            <div className="sp-lab">マスク<i>{mask[oct]}</i></div>
             <div className="sp-row">
               {W8.map((w, i) => (
                 <button key={w} className={"sp-c" + (bits & w ? " on" : "") + (cut === i + 1 ? " edge" : "")}
-                  onClick={() => set({ bits: bits & w ? bits - w : bits + w, zero: false, one: false })}>
+                  onClick={() => set({ bits: bits & w ? bits - w : bits + w, ib: 0, it: false, zero: false, one: false })}>
                   {bits & w ? 1 : 0}
                 </button>
               ))}
             </div>
-            <div className="sp-lab">IP<i>{parts[oct]}</i></div>
-            <div className="sp-row">
-              {ipBits.map((c, i) => (
-                <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
-              ))}
-            </div>
-            <div className="sp-lab" />
+            <div className="sp-lab">重み</div>
             <div className="sp-row w">{W8.map((w) => <span key={w} className="sp-w">{w}</span>)}</div>
           </div>
 
+          {/* ③ IPアドレスの数も、自分で 1 と 0 にする。
+              ②と同じ手つきを、数を変えてもう一度やるだけ */}
           {cut > 0 && (
             <>
-              <div className={"lead " + (ready ? "past" : "now")}>③ IPアドレスの <b>線から右</b>を、ぜんぶ 0 と ぜんぶ 1 にする</div>
+              <div className={"lead " + (st.it ? "past" : "now")}>
+                ③ <b>同じオクテット</b>の IPアドレス <b>{parts[oct]}</b> を 1 と 0 にする
+              </div>
               <div className="split">
-                {/* **自分で入力する。**線から左はそのまま、右を自分で 0 と 1 にする。
-                    機械が埋めると、そこだけ手が動かないまま通ってしまう */}
-                <div className="sp-lab">ぜんぶ 0</div>
+                <div className="sp-lab">IP<i>{parts[oct]}</i></div>
                 <div className="sp-row">
-                  {ipBits.map((c, i) => (
-                    i < cut
-                      ? <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
-                      : <button key={i} className={"sp-c" + ((st.zb || 0) & W8[i] ? " on" : "")}
-                          onClick={() => set({ zb: (st.zb || 0) ^ W8[i], zero: true })}>{(st.zb || 0) & W8[i] ? 1 : 0}</button>
+                  {W8.map((w, i) => (
+                    <button key={w} className={"sp-c" + ((st.ib || 0) & w ? " on" : "") + (cut === i + 1 ? " edge" : "")}
+                      onClick={() => set({ ib: (st.ib || 0) ^ w, it: true, zero: false, one: false })}>
+                      {(st.ib || 0) & w ? 1 : 0}
+                    </button>
                   ))}
                 </div>
-                <div className="sp-lab">ぜんぶ 1</div>
+                {/* 重みは、押すところのすぐ下に。暗算で 112 = 64+32+16 をやらせない */}
+                <div className="sp-lab">重み</div>
+                <div className="sp-row w">{W8.map((w) => <span key={w} className="sp-w">{w}</span>)}</div>
+              </div>
+              <div className="out">
+                <span className="o-x">
+                  {parts[oct]}{W8.filter((w) => (st.ib || 0) & w).map((w) => ` − ${w}`).join("")}
+                </span>
+                <span className="o-n">残り <b>{parts[oct] - W8.reduce((a, w) => a + ((st.ib || 0) & w ? w : 0), 0)}</b></span>
+              </div>
+            </>
+          )}
+
+          {/* ④⑤ 押すのは行ごとに1回。マスごとの判断は無い（線から右は全部おなじ値）。
+              判断は②③で終わっていて、ここは「何をするか」を決めるだけ */}
+          {st.it && (
+            <>
+              <div className={"lead " + (st.zero ? "past" : "now")}>
+                ④ 線から右を、<b>ぜんぶ 0</b> にする
+              </div>
+              <div className="split bulk">
+                <button className={"go" + (st.zero ? " on" : "")} onClick={() => set({ zero: true })}>ぜんぶ 0</button>
                 <div className="sp-row">
                   {ipBits.map((c, i) => (
                     i < cut
                       ? <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
-                      : <button key={i} className={"sp-c" + ((st.ob || 0) & W8[i] ? " on" : "")}
-                          onClick={() => set({ ob: (st.ob || 0) ^ W8[i], one: true })}>{(st.ob || 0) & W8[i] ? 1 : 0}</button>
+                      : <span key={i} className={st.zero ? "sp-c fixed done" : "sp-c blank"}>{st.zero ? 0 : ""}</span>
                   ))}
                 </div>
               </div>
             </>
           )}
 
+          {st.zero && (
+            <>
+              <div className={"lead " + (st.one ? "past" : "now")}>
+                ⑤ こんどは、<b>ぜんぶ 1</b> にする
+              </div>
+              <div className="split bulk">
+                <button className={"go" + (st.one ? " on" : "")} onClick={() => set({ one: true })}>ぜんぶ 1</button>
+                <div className="sp-row">
+                  {ipBits.map((c, i) => (
+                    i < cut
+                      ? <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
+                      : <span key={i} className={st.one ? "sp-c fixed done" : "sp-c blank"}>{st.one ? 1 : ""}</span>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
+
           {(st.zero || st.one) && (
             <div className="derive">
-              {st.zero && <div className="d-r"><span>ぜんぶ 0 にすると</span><b>{myNet}</b></div>}
-              {st.one && <div className="d-r"><span>ぜんぶ 1 にすると</span><b>{myBc}</b></div>}
+              {st.zero && <div className="d-r col"><span>いちばん小さい数 ＝ <b>ネットワークアドレス</b></span><b>{myNet}</b></div>}
+              {st.one && <div className="d-r col"><span>いちばん大きい数 ＝ <b>ブロードキャストアドレス</b></span><b>{myBc}</b></div>}
               {/* ＋1／−1 は形で見せる。テストの外れの選択肢に「±1 を忘れた」が入っている */}
               {ready && q.goal === "range" && (
                 <>
-                  <div className="d-r"><span>{myNet} は使えない　＋1</span><b>{out.split(" 〜 ")[0]}</b></div>
-                  <div className="d-r"><span>{myBc} は使えない　−1</span><b>{out.split(" 〜 ")[1]}</b></div>
-                  <div className="d-r ans"><span>答え</span><b>{out}</b></div>
+                  <div className="d-r col"><span>{myNet} は使えない → ＋1</span><b>{out.split(" 〜 ")[0]}</b></div>
+                  <div className="d-r col"><span>{myBc} は使えない → −1</span><b>{out.split(" 〜 ")[1]}</b></div>
+                  <div className="d-r col ans"><span>答え</span><b>{out}</b></div>
                 </>
               )}
             </div>
@@ -815,7 +847,7 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
   const w = value;
   const d = w == null ? null : pickOut(w, q.goal, q.base);   // 計算は gen.js に任せる
   const bits = d ? d.bits : null;
-  const out = (myNet && myBc) ? pairOut(myNet, myBc, q.goal) : "";
+  const out = d ? d.out : "";
   const cell = (x) => (
     <button key={x} className={"cell wide" + (w === x ? " on" : "")}
       onClick={() => !locked && onChange(x)}>
@@ -824,9 +856,10 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
   );
   return (
     <div className="box">
-      {q.goal === "host" && (
-        <div className="lead">ネットワークアドレスとブロードキャストアドレスのぶんで ＋2　<b>{q.need} + 2 = {q.want}</b></div>
-      )}
+      {/* 与えられた数の読み替えを、いちばん上に平らな1行で（ステージ4と同じ形） */}
+      {q.goal === "host"
+        ? <div className="sub">{q.need}台 ＋2（ネットワークアドレスとブロードキャストアドレスのぶん）＝ <b>{q.want}</b></div>
+        : <div className="sub">クラス{q.cls}（/{q.base} から）／ 必要なサブネット数 <b>{q.want}</b></div>}
       {/* やり方（右から順に見て…）ではなく、めざす形を1行だけ。
           「入るいちばん小さい箱」は、説明しなくても分かる */}
       <div className={"lead " + (w != null ? "past" : "now")}><b>{q.want}</b> が入る、いちばん小さいところを押す</div>
@@ -847,7 +880,7 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
           <div className="d-r"><span>押したところ</span><b>{w}</b></div>
           <div className="d-r"><span>{q.goal === "host" ? "ホスト部" : "サブネットに使う"}</span><b>{bits} 桁</b></div>
           {q.goal === "subnet" && <div className="d-r"><span>/{q.base} から {bits} 桁 のばす</span><b>/{q.base} + {bits}</b></div>}
-          <div className="d-r ans"><span>答え</span><b>{out}</b></div>
+          <div className="d-r col ans"><span>答え</span><b>{out}</b></div>
         </div>
       )}
       <button className="next" onClick={() => onSubmit(out)} disabled={locked || w == null}>これで決定</button>
@@ -905,7 +938,7 @@ function StackBoard({ q, value, onChange, locked, onSubmit }) {
           {cut != null && (
             <div className="derive">
               <div className="d-r"><span>同じなのは</span><b>上から {oc * 8 + cut} 桁ぶん</b></div>
-              <div className="d-r ans"><span>答え</span><b>{out}</b></div>
+              <div className="d-r col ans"><span>答え</span><b>{out}</b></div>
             </div>
           )}
         </>
@@ -981,6 +1014,8 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
     const v = calcTotal(st.calc);
     return (
       <div className="box">
+        {/* 練習と急に形が変わらないよう、表の枠だけは出す。中身は自分で思い出す */}
+        {q.station === "S0" && <WeightTable blank />}
         <Calc plain={q.station === "S0"} value={st.calc} onChange={(c) => set({ calc: c })} />
         <button className="next" onClick={() => onSubmit(v)} disabled={locked || !st.calc}>
           {v} で決定
@@ -1036,8 +1071,10 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
         {/* 先に電卓で引き算をして、その結果を下のマスに入れる。
             道具（電卓）が上、答えを書くところが下。手を動かす順番と画面の順番をそろえる */}
         <Calc value={st.calc} onChange={(c) => set({ calc: c })} />
+        {/* 電卓の続きに見えないよう、間を空けて名前を付ける */}
+        <div className="lead now">引けたところに <b>1</b>、引けなかったところに <b>0</b>。左から入れましょう</div>
         {/* 重みは書かない。どの桁がいくつかは、自分の頭から出す */}
-        <div className="row8">
+        <div className="row8 answ">
           {W.map((w) => (
             <button key={w} className={"cell bare" + (bits & w ? " on" : "")}
               onClick={() => !locked && set({ bits: bits & w ? bits - w : bits + w })}>
@@ -1061,7 +1098,10 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
               // 答え合わせのあとだけ、正解を緑・押した外れを赤にする
               + (locked && c === String(q.answer) ? " right" : "")
               + (locked && st.pick === c && c !== String(q.answer) ? " wrong" : "")}
-            onClick={() => !locked && set({ pick: c })}>{c}</button>
+            onClick={() => !locked && set({ pick: c })}>
+            <span>{c}</span>
+            {locked && st.pick === c && c !== String(q.answer) && <i>あなたの回答</i>}
+          </button>
         ))}
       </div>
       {/* 選ぶだけの回に電卓は要らない。使わない道具を置くと、押すものが増えて迷う */}
@@ -1098,13 +1138,13 @@ function Result({ res, plan, onHome, onAgain, onTest }) {
         <>
           <button className="next" onClick={onTest}>テストをする</button>
           <button className="mini" onClick={onAgain}>もう一度 練習する</button>
-          <button className="mini" onClick={onHome}>ホームへ</button>
+          <button className="mini" onClick={onHome}>トップ画面に戻る</button>
         </>
       ) : (
         <>
-          <button className="next" onClick={cleared ? onHome : onAgain}>{cleared ? "つづける" : "もう一度"}</button>
+          <button className="next" onClick={cleared ? onHome : onAgain}>{cleared ? "トップ画面に戻る" : "もう一度"}</button>
           <button className="mini" onClick={cleared ? onAgain : onHome}>
-            {cleared ? "同じステージをもう一度" : "ホームへ"}
+            {cleared ? "同じステージをもう一度" : "トップ画面に戻る"}
           </button>
         </>
       )}
@@ -1132,12 +1172,6 @@ export default function App() {
     // 練習は、まず説明の1枚から。そこから暗記ドリルかテストへ行く
     if (test == null) { setSheetOf(station); setScreen("memo"); return; }
     if (test === "drill") { setSheetOf(station); setScreen("drill"); return; }
-    // 覚える表が無いステージは、説明を見た時点で練習ぶんを済みにする（中間の段を作らない）
-    if (test && !CARDS[station] && !isLit(progress, station)) {
-      const cur = progress[station] || { seen: 0, correct: 0, lit: false, solo: false };
-      const nx = { ...progress, [station]: { ...cur, lit: true } };
-      setProgress(nx); save(nx);
-    }
     const first = !progress[station];         // そのステージが初めてか
     const queue = [];
     const n = sizeOf(test);
@@ -1201,16 +1235,6 @@ export default function App() {
         <Memo key={sheetOf} station={sheetOf}
           onDrill={() => start(sheetOf, false)} onTest={() => start(sheetOf, true)}
           onHome={() => setScreen("home")} />
-      )}
-      {screen === "drill" && sheetOf && (
-        <Drill key={sheetOf} station={sheetOf} onHome={() => setScreen("home")}
-          onDone={() => {
-            // 表なしで全部言えたら、覚えたことにする
-            const cur = progress[sheetOf] || { seen: 0, correct: 0, lit: false, solo: false };
-            const next = { ...progress, [sheetOf]: { ...cur, lit: true } };
-            setProgress(next); save(next);
-            setSheetOf(sheetOf); setScreen("memo");
-          }} />
       )}
       {screen === "play" && plan && (
         <Play key={runId} plan={plan} onDone={(rs) => done(rs, false)} onQuit={(rs) => done(rs, true)} />
@@ -1281,6 +1305,12 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 
 /* 盤 */
 .box{margin-top:2px}
+/* 盤ごと1枚のカード。答え合わせで枠の色が変わり、外すと揺れる */
+.card{border:1.5px solid #21262d;border-radius:16px;padding:14px;margin-top:8px;
+  transition:border-color .2s,box-shadow .2s}
+.card.ok{border-color:#2ea043}
+.card.ng{border-color:#f85149;box-shadow:0 0 12px #2a1315;animation:shake .2s}
+.verdict{border-top:1px solid #21262d;margin-top:16px;padding-top:14px}
 .lead.now{border-left:3px solid #58a6ff;padding-left:9px;color:#e6edf3}
 .lead.past{color:#484f58}
 .lead{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 8px}
@@ -1318,6 +1348,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tick{flex:1;text-align:center;font-size:11px;color:#8b949e}
 .d-lab{width:44px;flex:none;font-size:11px;color:#8b949e;text-align:right;padding-right:6px}
 .row8.tight{gap:3px}
+.row8.answ{margin-bottom:10px}
 .wtable{margin-bottom:14px}
 /* 式と答えのあいだをつなぐ1行 */
 .bridge{display:flex;flex-direction:column;align-items:center;gap:2px;margin:8px 0}
@@ -1326,36 +1357,42 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.big2{font-size:15px;font-weight:800;color:#e6edf3}
 /* 練習の1枚。いちばん下に「テストをする」が貼り付く */
 .sheet-p{padding-bottom:110px}
-.gotest{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#0d1117;
-  border-top:1px solid #21262d;padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+/* 帯にせず、ボタンだけ浮かせる。中身は本文と同じ幅・同じ余白にそろえる */
+.gotest{position:fixed;left:0;right:0;bottom:0;z-index:30;pointer-events:none;
+  max-width:460px;margin:0 auto;padding:0 8px calc(10px + env(safe-area-inset-bottom))}
 .gotest.two{display:flex;gap:8px}
-.gotest .next{max-width:432px;margin:0 auto;flex:1}
+.gotest .next{flex:1;min-width:0;pointer-events:auto;
+  box-shadow:0 6px 18px #000a}
 .next.ghost{background:#161b22;border:1.5px solid #2ea043;color:#56d364}
 .how{font-size:15px;line-height:1.7;margin-bottom:4px}
-/* 暗記ドリル。合図は1つ、いちばん大きい字で真ん中に */
-.drill{padding-bottom:40px}
 .link1{font-size:13px;color:#8b949e;line-height:1.7;padding:10px 12px;margin-bottom:12px;
   border-left:3px solid #30363d;background:#161b22;border-radius:0 8px 8px 0}
 .rnext{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 4px;text-align:left}
-.dwhy{text-align:center;font-size:13px;color:#8b949e;margin:8px 0 16px;
-  font-family:ui-monospace,Menlo,monospace}
-.dcard{font-size:34px;font-weight:800;text-align:center;padding:22px 8px;margin:16px 0;
-  font-family:ui-monospace,Menlo,monospace;background:#161b22;border:0;border-radius:16px;
-  word-break:break-all}
-.dopts{display:grid;grid-template-columns:1fr;gap:8px}
-.dopt{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:10px 6px;
-  border:1.5px solid #30363d;border-radius:12px;background:#161b22;
-  font-size:17px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
-.dopt.right{border-color:#2ea043;background:#0f2a16;color:#56d364}
-.dopt.ng{border-color:#f85149;color:#ff7b72}
-.dopt i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72}
+/* /28 が何なのかを見せる図。ネットワーク部＝青、ホスト部＝灰、線＝黄 */
+.figure{margin:12px 0 14px;font-family:ui-monospace,Menlo,monospace;text-align:center}
+.fig-h{display:flex;justify-content:space-between;font-size:11px;color:#8b949e;margin-bottom:6px}
+.fig-n{color:#79c0ff}
+.fig-o{color:#8b949e}
+.fig-b{font-size:13px;line-height:1.9;white-space:nowrap}
+.fig-1{color:#79c0ff;background:#132030;padding:2px 1px}
+.fig-0{color:#8b949e;background:#161b22;padding:2px 1px}
+.fig-v{color:#e6edf3;padding:0 10px}
+.fig-d{color:#8b949e}
+.fig-l{display:inline-block;width:3px;height:15px;background:#e3b341;vertical-align:-3px;margin:0 1px}
+.fig-c{font-size:11px;color:#e3b341;margin-top:4px}
+.fig-c.ntw{color:#8b949e;margin-bottom:8px}
+.fig-lab{font-size:11px;color:#8b949e;padding-right:10px}
+.fig-r{font-size:11px;color:#8b949e;padding-left:10px}
 .tut{border-top:1px solid #21262d;padding-top:14px;margin-top:14px}
 .tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
 .dhead.ng{color:#ff7b72}
-.shake{animation:shake .2s}
+.msub2{font-size:13px;color:#8b949e;margin:4px 0 14px}
+.mkind{display:inline-block;font-size:13px;font-weight:800;color:#79c0ff;
+  background:#132030;border:1.5px solid #58a6ff;border-radius:99px;
+  padding:6px 14px;margin-bottom:10px}
 .mtitle{font-size:22px;font-weight:800;margin:6px 0 6px}
 /* 解き方の要点。操作の前に置く言葉は、これ1行だけにする */
 .point{font-size:13px;color:#8b949e;margin-bottom:10px}
@@ -1370,7 +1407,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 押せないものは、枠を持たない。枠があるのに押せないと、押せると思って触ってしまう */
 .num{flex:1;text-align:center;font-size:17px;font-weight:700;
   font-family:ui-monospace,Menlo,monospace;color:#8b949e;padding:8px 2px}
-.num.on{color:#79c0ff}
+.num.on{color:#79c0ff;background:#132030;border-radius:8px}
 .oct.on{border-color:#58a6ff;background:#132030;color:#79c0ff;font-weight:900}
 /* まだ数字が入っていない枠は破線。入ると実線に変わる */
 .oct.blank{border-style:dashed;background:none;color:#484f58}
@@ -1391,6 +1428,15 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .unlock.on{border-color:#58a6ff;color:#79c0ff}
 .split{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
+.sp-c.blank{border-style:dashed;background:none}
+.sp-c.done{color:#79c0ff}
+/* 行ごと押す段。行頭のボタンぶん、左を広くとる */
+.split.bulk{grid-template-columns:64px 1fr}
+.split.bulk .go{min-height:44px;font-size:13px;padding:6px 4px}
+.split.bulk .go.on{border-color:#58a6ff;background:#132030;color:#79c0ff}
+/* 名前と数を同じ行に置くと折り返して崩れるので、縦に積む */
+.d-r.col{display:block}
+.d-r.col b{display:block;margin-top:2px;text-align:left}
 .sp-c.off{color:#484f58}
 .sp-c.sp-c.zero{border-color:#58a6ff;color:#79c0ff}
 .sp-c.sp-lab i{display:block;font-style:normal;color:#8b949e;font-size:11px;margin-top:2px}
@@ -1402,8 +1448,11 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 押せないものは、枠も地の色も持たない。枠があるのに押せないと、押せると思って触ってしまう */
 .sp-c.fixed{display:flex;align-items:center;justify-content:center;color:#e6edf3;
   border-color:transparent;background:none}
-/* 線は「ここまで同じ／ここまでがネットワーク」の意味。だから選んだ桁の**右**に引く */
-.sp-c.edge{box-shadow:3px 0 0 #e3b341}
+/* 線は「ここまで同じ／ここまでがネットワーク」の意味。だから選んだ桁の**右**に引く。
+   丸い枠に影を付けるとカッコのように曲がって見えるので、まっすぐな棒を1本置く */
+.sp-c,.st-c{position:relative}
+.sp-c.edge::after,.st-c.edge::after{content:"";position:absolute;right:-3px;top:2px;bottom:2px;
+  width:2px;background:#e3b341;border-radius:1px}
 .sp-row.w{grid-template-columns:repeat(8,1fr)}
 .sp-row.w9{grid-template-columns:repeat(9,1fr)}
 .sp-row.w9 .sp-c{font-size:11px}
@@ -1424,7 +1473,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .st-c{height:44px;border:1px solid #30363d;border-radius:7px;background:#161b22;
   font-size:15px;font-family:ui-monospace,Menlo,monospace;color:#8b949e;padding:0}
 .st-c.same{background:#132030;color:#79c0ff;font-weight:800}
-.st-c.edge{box-shadow:3px 0 0 #e3b341}
+
 
 .next{display:block;width:100%;padding:16px;border-radius:12px;background:#238636;
   color:#fff;font-size:17px;font-weight:700;margin-top:16px}
@@ -1439,7 +1488,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   padding:11px 14px;margin-bottom:16px;font-size:13px;color:#e3b341;text-align:center}
 .cell.bare{aspect-ratio:1/1.1}
 .choices{display:flex;flex-direction:column;gap:9px}
-.ch{width:100%;min-height:56px;padding:14px;border:1.5px solid #30363d;border-radius:12px;
+.ch i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72;margin-left:10px}
+.ch{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;padding:14px;border:1.5px solid #30363d;border-radius:12px;
   background:#161b22;font-size:17px;font-family:ui-monospace,Menlo,monospace;
   word-break:break-all;transition:.15s}
 .ch.on{border-color:#58a6ff;background:#132030;color:#79c0ff;font-weight:800}
@@ -1447,7 +1497,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .ch.wrong{border-color:#f85149;background:#2a1315;color:#ff7b72;font-weight:700}
 
 /* 計算するところ。＋と− だけ */
-.calc{margin-top:18px}
+.calc{margin-bottom:20px;margin-top:18px}
 .calc-d{background:#0f141b;border:0;border-radius:12px;
   padding:12px 14px;margin-bottom:8px;text-align:right}
 .calc-e{font-size:15px;color:#8b949e;font-family:ui-monospace,Menlo,monospace;
@@ -1470,22 +1520,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .step-v{font-size:14.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;
   word-break:break-all;line-height:1.6}
 /* 答え合わせの帯（画面のいちばん下に貼り付く） */
-.judge{position:fixed;left:0;right:0;bottom:0;z-index:40;border-top:2px solid;
-  padding:12px 14px calc(12px + env(safe-area-inset-bottom));animation:up .18s ease-out}
-.judge.ok{background:#0f2a16;border-color:#2ea043;cursor:pointer}
-.judge.ng{background:#2a1315;border-color:#f85149}
-.j-in{max-width:460px;margin:0 auto}
-.j-head{display:flex;align-items:center;gap:10px}
-.j-mark{font-size:34px;line-height:1;font-weight:800}
-.j-word{font-size:17px;font-weight:800}
-.judge.ok .j-mark,.judge.ok .j-word{color:#56d364}
-.judge.ng .j-mark,.judge.ng .j-word{color:#ff7b72}
-.j-ans{font-size:15px;margin-top:6px;color:#e6edf3}
 .j-ans b{font-size:17px;font-family:ui-monospace,Menlo,monospace}
 .j-tip{font-size:13px;color:#8b949e;margin-top:6px}
-.judge .next{margin-top:10px}
 /* 帯のぶん、下に余白を空けて盤が隠れないようにする */
-.lit-ok,.lit-ng{padding-bottom:180px}
+
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}

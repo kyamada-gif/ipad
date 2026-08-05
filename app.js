@@ -1,5 +1,5 @@
 /* 自動生成: build.js（app.jsx -> app.js）。手で編集せず app.jsx を直して再ビルド。 */
-const { useState, useEffect, useRef, useMemo } = React;
+const { useState, useEffect, useRef } = React;
 /*
  * IPアドレスの計算（試作2）
  *
@@ -14,7 +14,7 @@ const { useState, useEffect, useRef, useMemo } = React;
  *
  * ■ 画面
  *   ホーム（7ステージの道）→ 練習（5問）→ 結果
- *   押すボタンはホームに「つづける」1つ。何をやるかはアプリが決める。
+ *   トップ画面にステージの札が並ぶ。札を押すと、そのステージの入口が開く。
  */
 
 const DRILL_QN = 5; // 練習は5問（手を動かして慣れる場）
@@ -60,15 +60,6 @@ const byId = id => STATIONS.find(s => s.id === id);
 const isLit = (p, id) => !!(p[id] && p[id].lit);
 const isSolo = (p, id) => !!(p[id] && p[id].solo);
 const isOpen = (p, st) => st.need.every(n => isLit(p, n));
-/** カードを混ぜる。順番で覚えてしまわないように */
-const shuffleCards = a => {
-  const x = a.slice();
-  for (let i = x.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [x[i], x[j]] = [x[j], x[i]];
-  }
-  return x;
-};
 const buzz = ms => {
   try {
     navigator.vibrate && navigator.vibrate(ms);
@@ -197,7 +188,7 @@ function Play({
     if (window.__debug) window.__q = q;
   }, [q]);
   useEffect(() => {
-    if (judged === false && why.current) {
+    if (judged !== null && why.current) {
       why.current.scrollIntoView({
         block: "nearest",
         behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth"
@@ -251,7 +242,7 @@ function Play({
     onSubmit: answer
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "wrap play" + (judged === null ? "" : judged ? " lit-ok" : " lit-ng")
+    className: "wrap play"
   }, /*#__PURE__*/React.createElement("div", {
     className: "topbar"
   }, /*#__PURE__*/React.createElement("button", {
@@ -282,125 +273,37 @@ function Play({
     className: "prompt"
   }, q.prompt), plan.test && /*#__PURE__*/React.createElement("div", {
     className: "testnote"
-  }, "\u899A\u3048\u305F\u8868\u3092\u601D\u3044\u51FA\u3057\u3066\u7B54\u3048\u307E\u3059"), plan.test ? /*#__PURE__*/React.createElement(TestBoard, board) : q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged === false && /*#__PURE__*/React.createElement("div", {
-    className: "why",
+  }, "\u899A\u3048\u305F\u8868\u3092\u601D\u3044\u51FA\u3057\u3066\u7B54\u3048\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "card" + (judged === null ? "" : judged ? " ok" : " ng"),
     ref: why
+  }, plan.test ? /*#__PURE__*/React.createElement(TestBoard, board) : q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : q.input === "wild" ? /*#__PURE__*/React.createElement(WildBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged !== null && /*#__PURE__*/React.createElement("div", {
+    className: "verdict"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "dhead " + (judged ? "ok" : "ng")
+  }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement("div", {
+    className: "j-ans"
+  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
+    className: "j-tip"
+  }, "\uD83D\uDCA1 ", q.tip), judged === false && !q.memorize && /*#__PURE__*/React.createElement("div", {
+    className: "why"
   }, /*#__PURE__*/React.createElement("div", {
     className: "why-h"
-  }, "\u3053\u3046\u89E3\u304F"), q.steps.map((s, i) => /*#__PURE__*/React.createElement("div", {
+  }, "\u3053\u3046\u89E3\u304F"), q.steps.map((st2, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "step"
   }, /*#__PURE__*/React.createElement("span", {
     className: "step-n"
   }, i + 1), /*#__PURE__*/React.createElement("span", {
     className: "step-t"
-  }, s.t), /*#__PURE__*/React.createElement("span", {
+  }, st2.t), /*#__PURE__*/React.createElement("span", {
     className: "step-v"
-  }, s.v)))), judged !== null && /*#__PURE__*/React.createElement("div", {
-    className: "judge" + (judged ? " ok" : " ng") + (judged ? "" : " shake")
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "j-in"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "j-head"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "j-mark"
-  }, judged ? "✓" : "✕"), /*#__PURE__*/React.createElement("span", {
-    className: "j-word"
-  }, judged ? "正解" : "不正解")), !judged && /*#__PURE__*/React.createElement("div", {
-    className: "j-ans"
-  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
-    className: "j-tip"
-  }, "\uD83D\uDCA1 ", q.tip), judged ? /*#__PURE__*/React.createElement("button", {
+  }, st2.v)))), judged ? /*#__PURE__*/React.createElement("button", {
     className: "next calm",
     onClick: () => next(results)
   }, idx + 1 >= queue.length ? "結果を見る" : "次へ →") : /*#__PURE__*/React.createElement("button", {
     className: "next retry",
     onClick: retry
   }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6"))));
-}
-
-/* ── 暗記ドリル（練習）───────────────────────────────────
-   **導出ではなく想起。**盤も電卓も出さない。合図を1つ大きく出して、
-   同じ集合・同じ並びから選ばせる。場所の記憶が思い出す助けになる。
-   1周目は表を見てよい。2周目からは表を畳む。
-   間違えたカードは山に戻る。**全部を表なしで即答できたら終わり。** */
-function Drill({
-  station,
-  onDone,
-  onHome
-}) {
-  const cards = CARDS[station];
-  const [pile] = useState(() => shuffleCards(cards));
-  const [i, setI] = useState(0);
-  const [judged, setJudged] = useState(null);
-  const t = useRef(null);
-  useEffect(() => () => clearTimeout(t.current), []);
-  const card = pile[i];
-  // 外れは**その表の中の近いもの**から3つ。でたらめだと消去法で当たってしまう
-  const opts = useMemo(() => {
-    if (!card) return [];
-    const k = cards.findIndex(c => c.q === card.q);
-    const near = [];
-    // 台数のステージだけ、「−2 を忘れた数」を必ず1つ混ぜる（本番の外れと同じ作り）
-    const m = card.a.match(/^(\d+) 台$/);
-    if (m) near.push(`${Number(m[1]) + 2} 台`);
-    for (const d of [1, -1, 2, -2, 3, -3, 4, -4]) {
-      const c = cards[k + d];
-      if (c && c.a !== card.a && !near.includes(c.a)) near.push(c.a);
-      if (near.length >= 3) break;
-    }
-    return shuffleCards([card.a].concat(near.slice(0, 3)));
-  }, [card && card.q]);
-  const pick = a => {
-    if (judged !== null || !card) return;
-    setJudged({
-      good: a === card.a,
-      picked: a
-    });
-    buzz(a === card.a ? 30 : 60);
-  };
-  // 自動では進まない。**必ず答え合わせを挟む**（読む間を機械が奪わない）
-  const go = () => {
-    if (!judged) return;
-    if (judged.good) {
-      setJudged(null);
-      if (i + 1 >= pile.length) onDone();else setI(i + 1);
-    } else setJudged(null); // 正解するまで、同じ問題から進まない
-  };
-  if (!card) return null;
-  const done = i; // 正解したぶんだけ進む
-  return /*#__PURE__*/React.createElement("div", {
-    className: "wrap drill"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "topbar"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "x",
-    onClick: onHome
-  }, "\u2715"), /*#__PURE__*/React.createElement("div", {
-    className: "pbar"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "pbar-in",
-    style: {
-      width: done / cards.length * 100 + "%"
-    }
-  })), /*#__PURE__*/React.createElement("div", {
-    className: "pnum"
-  }, done, "/", cards.length)), /*#__PURE__*/React.createElement("div", {
-    className: "dcard"
-  }, card.q), /*#__PURE__*/React.createElement("div", {
-    className: "dopts" + (judged && !judged.good ? " shake" : "")
-  }, opts.map(a => /*#__PURE__*/React.createElement("button", {
-    key: a,
-    className: "dopt" + (judged && a === card.a ? " right" : "") + (judged && judged.picked === a && a !== card.a ? " ng" : ""),
-    onClick: () => pick(a)
-  }, /*#__PURE__*/React.createElement("span", null, a), judged && judged.picked === a && a !== card.a && /*#__PURE__*/React.createElement("i", null, "\u3042\u306A\u305F\u306E\u7B54\u3048")))), judged && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "dhead " + (judged.good ? "ok" : "ng")
-  }, judged.good ? "✓ 正解" : "✕ 不正解"), /*#__PURE__*/React.createElement("div", {
-    className: "dwhy"
-  }, card.w), /*#__PURE__*/React.createElement("button", {
-    className: "next " + (judged.good ? "calm" : "retry"),
-    onClick: go
-  }, judged.good ? "次へ →" : "🔁 もう一度")));
 }
 
 /* ── 説明の1枚 ────────────────────────
@@ -455,7 +358,7 @@ function Tutorial({
     className: "tut-h"
   }, lead), /*#__PURE__*/React.createElement("div", {
     className: "testnote"
-  }, "\u307E\u305A\u306F1\u554F\u3001\u624B\u3092\u52D5\u304B\u3057\u3066\u3084\u3063\u3066\u307F\u307E\u3059\uFF08\u63A1\u70B9\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "\u307E\u305A\u306F1\u554F\u3001\u624B\u3092\u52D5\u304B\u3057\u3066\u3084\u3063\u3066\u307F\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "prompt"
   }, q.prompt), /*#__PURE__*/React.createElement("div", {
     className: "given"
@@ -466,15 +369,19 @@ function Tutorial({
     className: "gk"
   }, g.k), /*#__PURE__*/React.createElement("span", {
     className: "gv"
-  }, g.v)))), q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : q.input === "wild" ? /*#__PURE__*/React.createElement(WildBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged !== null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    ref: mark,
+  }, g.v)))), /*#__PURE__*/React.createElement("div", {
+    className: "card" + (judged === null ? "" : judged ? " ok" : " ng"),
+    ref: mark
+  }, q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : q.input === "wild" ? /*#__PURE__*/React.createElement(WildBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged !== null && /*#__PURE__*/React.createElement("div", {
+    className: "verdict"
+  }, /*#__PURE__*/React.createElement("div", {
     className: "dhead " + (judged ? "ok" : "ng")
   }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "dwhy"
-  }, "\u7B54\u3048\u306F ", String(q.answer)), /*#__PURE__*/React.createElement("button", {
+    className: "j-ans"
+  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer))), /*#__PURE__*/React.createElement("button", {
     className: "next retry",
     onClick: again
-  }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6"))));
+  }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6")))));
 }
 function Memo({
   station,
@@ -495,12 +402,114 @@ function Memo({
     className: "x",
     onClick: onHome
   }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    className: "mkind"
+  }, "\u30C1\u30E5\u30FC\u30C8\u30EA\u30A2\u30EB"), /*#__PURE__*/React.createElement("div", {
     className: "mtitle"
-  }, st.no, "\u3000", st.name), LINK[station] && /*#__PURE__*/React.createElement("div", {
+  }, st.no, "\u3000", st.name), /*#__PURE__*/React.createElement("div", {
+    className: "msub2"
+  }, "\u3053\u306E\u30B9\u30C6\u30FC\u30B8\u306E\u89E3\u304D\u65B9\u3092\u30011\u554F\u3084\u3063\u3066\u899A\u3048\u307E\u3059"), LINK[station] && /*#__PURE__*/React.createElement("div", {
     className: "link1"
   }, LINK[station]), /*#__PURE__*/React.createElement("div", {
     className: "how"
-  }, HOW[station]), station === "S8" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Tutorial, {
+  }, HOW[station]), station === "S8" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "how"
+  }, "IP\u30A2\u30C9\u30EC\u30B9\u306F 0 \u3068 1 \u304C 32\u500B\u3002", /*#__PURE__*/React.createElement("b", null, "\u524D\u534A\u304C\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u90E8"), "\uFF08\u3069\u306E\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u304B\uFF09\u3001", /*#__PURE__*/React.createElement("b", null, "\u5F8C\u534A\u304C\u30DB\u30B9\u30C8\u90E8"), "\uFF08\u305D\u306E\u4E2D\u306E\u3069\u306E\u6A5F\u68B0\u304B\uFF09\u3067\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "figure"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fig-h"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-n"
+  }, "\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u90E8\uFF081 \u304C 28\u500B\uFF09"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-o"
+  }, "\u30DB\u30B9\u30C8\u90E8\uFF080\uFF09")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-b"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "11111111"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-d"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "11111111"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-d"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "11111111"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-d"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "1111"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-l"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "fig-0"
+  }, "0000")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-b"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-v"
+  }, "255"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-d"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "fig-v"
+  }, "255"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-d"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "fig-v"
+  }, "255"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-d"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "fig-v"
+  }, "240")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-c"
+  }, "\u7DDA \uFF1D /28")), /*#__PURE__*/React.createElement("div", {
+    className: "how"
+  }, "\u70B9\u3067\u533A\u5207\u3089\u308C\u305F ", /*#__PURE__*/React.createElement("b", null, "4\u3064\u306E\u304B\u305F\u307E\u308A"), "\u3092\u3001\u305D\u308C\u305E\u308C ", /*#__PURE__*/React.createElement("b", null, "\u30AA\u30AF\u30C6\u30C3\u30C8"), " \u3068\u3044\u3044\u307E\u3059\uFF081\u3064 8\u500B\u3076\u3093\uFF09\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "how"
+  }, "/28 \u306F\u300C\u7DDA\u304C\u5148\u982D\u304B\u3089 28\u500B\u76EE\u300D\u3002\u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u306F\u3001\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u90E8\u3092 1\u30FB\u30DB\u30B9\u30C8\u90E8\u3092 0 \u306B\u3057\u3066 10\u9032\u6570\u3067\u66F8\u3044\u305F\u3082\u306E\u3002", /*#__PURE__*/React.createElement("b", null, "\u540C\u3058\u7DDA\u306E\u30012\u3064\u306E\u66F8\u304D\u65B9"), "\u3067\u3059\u3002")), station === "S3" && /*#__PURE__*/React.createElement("div", {
+    className: "figure"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "fig-h"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-n"
+  }, "\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u90E8"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-o"
+  }, "\u30DB\u30B9\u30C8\u90E8")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-b"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-lab"
+  }, "IP 135"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "100"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-l"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "fig-0"
+  }, "00111")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-b"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-lab"
+  }, "\u305C\u3093\u3076 0"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "100"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-l"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "fig-0"
+  }, "00000"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-r"
+  }, "\u2192 \u202610.128")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-c ntw"
+  }, "\u2191 \u3044\u3061\u3070\u3093\u5C0F\u3055\u3044\u6570 \uFF1D \u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u30A2\u30C9\u30EC\u30B9"), /*#__PURE__*/React.createElement("div", {
+    className: "fig-b"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "fig-lab"
+  }, "\u305C\u3093\u3076 1"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-1"
+  }, "100"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-l"
+  }), /*#__PURE__*/React.createElement("span", {
+    className: "fig-0"
+  }, "11111"), /*#__PURE__*/React.createElement("span", {
+    className: "fig-r"
+  }, "\u2192 \u202610.159")), /*#__PURE__*/React.createElement("div", {
+    className: "fig-c ntw"
+  }, "\u2191 \u3044\u3061\u3070\u3093\u5927\u304D\u3044\u6570 \uFF1D \u30D6\u30ED\u30FC\u30C9\u30AD\u30E3\u30B9\u30C8\u30A2\u30C9\u30EC\u30B9")), station === "S8" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Tutorial, {
     station: station,
     goal: "toMask",
     lead: "\u2460 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577 \u2192 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF",
@@ -525,7 +534,9 @@ function Memo({
 }
 
 /** 桁の重み表。教材の「2進数の桁の重みの表」そのまま。押せない（見るだけ）。 */
-function WeightTable() {
+function WeightTable({
+  blank
+}) {
   return /*#__PURE__*/React.createElement("div", {
     className: "split wtable"
   }, /*#__PURE__*/React.createElement("div", {
@@ -541,8 +552,8 @@ function WeightTable() {
     className: "sp-row"
   }, [7, 6, 5, 4, 3, 2, 1, 0].map(n => /*#__PURE__*/React.createElement("span", {
     key: n,
-    className: "sp-c fixed big2"
-  }, Math.pow(2, n)))));
+    className: blank ? "sp-c blank" : "sp-c fixed big2"
+  }, blank ? "" : Math.pow(2, n)))));
 }
 
 /* ── 盤 ワイルドカードマスク ────────────────────────────
@@ -603,25 +614,32 @@ function PowBoard({
   const rows = [7, 6, 5, 4, 3, 2, 1, 0];
   const sel = value;
   const out = sel == null ? "" : q.goal === "toValue" ? String(Math.pow(2, sel)) : String(sel);
+  const toPower = q.goal === "toPower";
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lead now"
-  }, "\u4E0B\u306E\u8868\u304B\u3089\u3001", /*#__PURE__*/React.createElement("b", null, "\u3042\u3066\u306F\u307E\u308B\u3068\u3053\u308D"), "\u3092\u62BC\u3057\u307E\u3057\u3087\u3046"), /*#__PURE__*/React.createElement("div", {
+  }, "\u4E0B\u306E\u8868\u304B\u3089\u3001", /*#__PURE__*/React.createElement("b", null, "\u7B54\u3048\u306E\u6570\u5B57"), "\u3092\u62BC\u3057\u307E\u3057\u3087\u3046"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }, "2\u306E"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
-  }, rows.map(n => /*#__PURE__*/React.createElement("button", {
+  }, rows.map(n => toPower ? /*#__PURE__*/React.createElement("button", {
     key: n,
     className: "sp-c" + (sel === n ? " on" : ""),
     onClick: () => !locked && onChange(n)
+  }, n, "\u4E57") : /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: "sp-c fixed"
   }, n, "\u4E57"))), /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
-  }, rows.map(n => /*#__PURE__*/React.createElement("button", {
+  }, rows.map(n => toPower ? /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: "sp-c fixed big2"
+  }, Math.pow(2, n)) : /*#__PURE__*/React.createElement("button", {
     key: n,
     className: "sp-c big2" + (sel === n ? " on" : ""),
     onClick: () => !locked && onChange(n)
@@ -631,7 +649,6 @@ function PowBoard({
     disabled: locked || sel == null
   }, "\u3053\u308C\u3067\u6C7A\u5B9A"));
 }
-
 /* ── 盤① 写して足す（1ステージ） ────────────────────────────────
    盤は空から始める。上の2進数を見て写す。押した重みが足されていく。 */
 function SumBoard({
@@ -729,11 +746,11 @@ function SubBoard({
     className: "out"
   }, /*#__PURE__*/React.createElement("span", {
     className: "o-x"
-  }, on.length ? on.map(w => `−${w}`).join(" ") : "まだ押していません")), /*#__PURE__*/React.createElement("div", {
+  }, on.length ? `${q.target} ${on.map(w => `− ${w}`).join(" ")}` : "まだ押していません")), /*#__PURE__*/React.createElement("div", {
     className: "bridge"
   }, /*#__PURE__*/React.createElement("span", {
     className: "b-t"
-  }, "\u5F15\u3044\u305F\u3068\u3053\u308D\u306B ", /*#__PURE__*/React.createElement("b", null, "1"), "\u3001\u5F15\u304B\u306A\u304B\u3063\u305F\u3068\u3053\u308D\u306B ", /*#__PURE__*/React.createElement("b", null, "0"), " \u3092\u7F6E\u304F\u3068"), /*#__PURE__*/React.createElement("span", {
+  }, "\u5F15\u3051\u305F\u3068\u3053\u308D\u306B ", /*#__PURE__*/React.createElement("b", null, "1"), "\u3001\u5F15\u3051\u306A\u304B\u3063\u305F\u3068\u3053\u308D\u306B ", /*#__PURE__*/React.createElement("b", null, "0"), " \u3092\u7F6E\u304F\u3068"), /*#__PURE__*/React.createElement("span", {
     className: "b-a"
   }, "\u2193")), /*#__PURE__*/React.createElement("div", {
     className: "out"
@@ -770,7 +787,7 @@ function MaskBoard({
     ...x
   });
   const d = maskBoardOut(full, bits, q.goal); // 計算は gen.js に任せる
-  const rest = q.goal === "toMask" ? q.board.len - full * 8 : null;
+
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
@@ -793,15 +810,17 @@ function MaskBoard({
     className: "dots ticks"
   }, /*#__PURE__*/React.createElement("span", {
     className: "d-lab"
-  }), [8, 16, 24, 32].map((t, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+  }, "1\u306E\u6570"), [8, 16, 24, 32].map((t, i) => /*#__PURE__*/React.createElement(React.Fragment, {
     key: t
   }, i > 0 && /*#__PURE__*/React.createElement("span", {
     className: "dot"
   }, " "), /*#__PURE__*/React.createElement("span", {
     className: "tick"
-  }, t)))), full < 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+  }, t)))), full >= 1 && q.goal === "toMask" && q.board.rest === 0 ? /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "\u2461 \u3042\u307E\u308A\u306F 0\u500B \u2192 \u306E\u3053\u308A\u306F ", /*#__PURE__*/React.createElement("b", null, "0 \u306E\u307E\u307E")) : full >= 1 && full < 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (bits ? "past" : "now")
-  }, "\u2461 \u306E\u3053\u308A", rest != null && rest > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, " ", /*#__PURE__*/React.createElement("b", null, rest, " \u500B")) : null, "\u306E ", /*#__PURE__*/React.createElement("b", null, "1"), " \u3092\u3001\u5DE6\u304B\u3089\u9806\u306B\u7F6E\u304F"), /*#__PURE__*/React.createElement("div", {
+  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2461 \u3042\u307E\u308A\u306E ", /*#__PURE__*/React.createElement("b", null, q.board.rest, " \u500B"), " \u3092\u3001\u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "1"), " \u306B") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2461 ", /*#__PURE__*/React.createElement("b", null, "255 \u3067\u306A\u3044\u6570"), "\u3092\u30011 \u3068 0 \u3067\u4F5C\u308B")), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
@@ -815,12 +834,18 @@ function MaskBoard({
     })
   }, bits & w ? 1 : 0))), /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
-  }), /*#__PURE__*/React.createElement("div", {
+  }, "\u91CD\u307F"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row w"
   }, W8.map(w => /*#__PURE__*/React.createElement("span", {
     key: w,
     className: "sp-w"
-  }, w))))), /*#__PURE__*/React.createElement("div", {
+  }, w)))), /*#__PURE__*/React.createElement("div", {
+    className: "out"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "o-x"
+  }, mask[oct], W8.filter(w => bits & w).map(w => ` − ${w}`).join("")), /*#__PURE__*/React.createElement("span", {
+    className: "o-n"
+  }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("b", null, mask[oct] - W8.reduce((a, w) => a + (bits & w ? w : 0), 0))))), /*#__PURE__*/React.createElement("div", {
     className: "derive"
   }, /*#__PURE__*/React.createElement("div", {
     className: "d-r" + (q.goal === "toLen" ? " ans" : "")
@@ -872,25 +897,36 @@ function SplitBoard({
   // 線は「いちばん右の 1 のうしろ」。自分で作った 1 と 0 から決まる
   const bs = W8.map(w => bits & w ? 1 : 0);
   const cut = bs.lastIndexOf(1) + 1;
-  const ipBits = oct == null ? [] : bin8(parts[oct]).split("").map(Number);
+  // ③で自分が押した 1 と 0。**機械は出さない**（ここを飛ばすと、この並びの出どころが分からなくなる）
+  const ipBits = W8.map(w => (st.ib || 0) & w ? 1 : 0);
 
   // 計算は gen.js の splitOut に任せる（画面と検算で同じ関数を使う）
   const d = oct != null && cut > 0 ? splitOut(ip, oct, cut, q.goal) : null;
-  const out = myNet && myBc ? pairOut(myNet, myBc, q.goal) : "";
-  // 押した 1 と 0 から、そのまま住所にする。計算は gen.js の addrWith
+  // 押した 1 と 0 から、そのまま住所にする。計算は gen.js の addrWith / pairOut
   const keep = oct == null ? 0 : ipBits.slice(0, cut).reduce((a2, c, i) => a2 + (c ? W8[i] : 0), 0);
-  const myNet = oct == null ? null : addrWith(ip, oct, keep + (st.zb || 0));
-  const myBc = oct == null ? null : addrWith(ip, oct, keep + (st.ob || 0));
-  const ready = d && st.zero && st.one;
+  const myNet = oct == null ? null : addrWith(ip, oct, keep, 0);
+  const myBc = oct == null ? null : addrWith(ip, oct, keep + restOnes(cut), 255);
+  const out = myNet && myBc ? pairOut(myNet, myBc, q.goal) : "";
+  const ready = d && st.it && st.zero && st.one;
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lead " + (oct != null ? "past" : "now")
-  }, "\u2460 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u3092\u5DE6\u304B\u3089\u898B\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "255 \u3067\u306A\u3044\u6570"), "\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "dots"
   }, /*#__PURE__*/React.createElement("span", {
     className: "d-lab"
-  }, "\u30B5\u30D6\u30CD\u30C3\u30C8", /*#__PURE__*/React.createElement("br", null), "\u30DE\u30B9\u30AF"), mask.map((m, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+  }, "IP"), parts.map((v, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "dot"
+  }, "."), /*#__PURE__*/React.createElement("span", {
+    className: "num" + (oct === i ? " on" : "")
+  }, v)))), /*#__PURE__*/React.createElement("div", {
+    className: "lead " + (oct != null ? "past" : "now")
+  }, "\u2460 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u3092\u5DE6\u304B\u3089\u898B\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "\u306F\u3058\u3081\u3066 255 \u3067\u306A\u304F\u306A\u308B\u6570"), "\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "dots"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "d-lab"
+  }, "\u30DE\u30B9\u30AF"), mask.map((m, i) => /*#__PURE__*/React.createElement(React.Fragment, {
     key: i
   }, i > 0 && /*#__PURE__*/React.createElement("span", {
     className: "dot"
@@ -899,95 +935,114 @@ function SplitBoard({
     onClick: () => set({
       oct: i,
       bits: 0,
+      ib: 0,
+      it: false,
       zero: false,
       one: false
     })
   }, m)))), !givenMask && /*#__PURE__*/React.createElement("div", {
     className: "sub"
   }, "/", len, " \u2192 ", maskStr(len), "\uFF08", byId("S8").no, "\u3064\u76EE\u306E\u30B9\u30C6\u30FC\u30B8\u3067\u3084\u3063\u305F\u3068\u3053\u308D\uFF09"), oct != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "dots"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "d-lab"
-  }, "IP\u30A2\u30C9\u30EC\u30B9"), parts.map((v, i) => /*#__PURE__*/React.createElement(React.Fragment, {
-    key: i
-  }, i > 0 && /*#__PURE__*/React.createElement("span", {
-    className: "dot"
-  }, "."), /*#__PURE__*/React.createElement("span", {
-    className: "num" + (oct === i ? " on" : "")
-  }, v)))), /*#__PURE__*/React.createElement("div", {
     className: "lead " + (cut > 0 ? "past" : "now")
-  }, "\u2461 ", /*#__PURE__*/React.createElement("b", null, mask[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2461 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u306E ", /*#__PURE__*/React.createElement("b", null, mask[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
-  }, "\u30B5\u30D6\u30CD\u30C3\u30C8", /*#__PURE__*/React.createElement("i", null, W8.reduce((a, w) => a + (bits & w ? w : 0), 0))), /*#__PURE__*/React.createElement("div", {
+  }, "\u30DE\u30B9\u30AF", /*#__PURE__*/React.createElement("i", null, mask[oct])), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
   }, W8.map((w, i) => /*#__PURE__*/React.createElement("button", {
     key: w,
     className: "sp-c" + (bits & w ? " on" : "") + (cut === i + 1 ? " edge" : ""),
     onClick: () => set({
       bits: bits & w ? bits - w : bits + w,
+      ib: 0,
+      it: false,
       zero: false,
       one: false
     })
   }, bits & w ? 1 : 0))), /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
-  }, "IP", /*#__PURE__*/React.createElement("i", null, parts[oct])), /*#__PURE__*/React.createElement("div", {
-    className: "sp-row"
-  }, ipBits.map((c, i) => /*#__PURE__*/React.createElement("span", {
-    key: i,
-    className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
-  }, c))), /*#__PURE__*/React.createElement("div", {
-    className: "sp-lab"
-  }), /*#__PURE__*/React.createElement("div", {
+  }, "\u91CD\u307F"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row w"
   }, W8.map(w => /*#__PURE__*/React.createElement("span", {
     key: w,
     className: "sp-w"
   }, w)))), cut > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "lead " + (ready ? "past" : "now")
-  }, "\u2462 IP\u30A2\u30C9\u30EC\u30B9\u306E ", /*#__PURE__*/React.createElement("b", null, "\u7DDA\u304B\u3089\u53F3"), "\u3092\u3001\u305C\u3093\u3076 0 \u3068 \u305C\u3093\u3076 1 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "lead " + (st.it ? "past" : "now")
+  }, "\u2462 ", /*#__PURE__*/React.createElement("b", null, "\u540C\u3058\u30AA\u30AF\u30C6\u30C3\u30C8"), "\u306E IP\u30A2\u30C9\u30EC\u30B9 ", /*#__PURE__*/React.createElement("b", null, parts[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
+  }, "IP", /*#__PURE__*/React.createElement("i", null, parts[oct])), /*#__PURE__*/React.createElement("div", {
+    className: "sp-row"
+  }, W8.map((w, i) => /*#__PURE__*/React.createElement("button", {
+    key: w,
+    className: "sp-c" + ((st.ib || 0) & w ? " on" : "") + (cut === i + 1 ? " edge" : ""),
+    onClick: () => set({
+      ib: (st.ib || 0) ^ w,
+      it: true,
+      zero: false,
+      one: false
+    })
+  }, (st.ib || 0) & w ? 1 : 0))), /*#__PURE__*/React.createElement("div", {
+    className: "sp-lab"
+  }, "\u91CD\u307F"), /*#__PURE__*/React.createElement("div", {
+    className: "sp-row w"
+  }, W8.map(w => /*#__PURE__*/React.createElement("span", {
+    key: w,
+    className: "sp-w"
+  }, w)))), /*#__PURE__*/React.createElement("div", {
+    className: "out"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "o-x"
+  }, parts[oct], W8.filter(w => (st.ib || 0) & w).map(w => ` − ${w}`).join("")), /*#__PURE__*/React.createElement("span", {
+    className: "o-n"
+  }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("b", null, parts[oct] - W8.reduce((a, w) => a + ((st.ib || 0) & w ? w : 0), 0))))), st.it && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "lead " + (st.zero ? "past" : "now")
+  }, "\u2463 \u7DDA\u304B\u3089\u53F3\u3092\u3001", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 0"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "split bulk"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "go" + (st.zero ? " on" : ""),
+    onClick: () => set({
+      zero: true
+    })
   }, "\u305C\u3093\u3076 0"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
   }, ipBits.map((c, i) => i < cut ? /*#__PURE__*/React.createElement("span", {
     key: i,
     className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
-  }, c) : /*#__PURE__*/React.createElement("button", {
+  }, c) : /*#__PURE__*/React.createElement("span", {
     key: i,
-    className: "sp-c" + ((st.zb || 0) & W8[i] ? " on" : ""),
+    className: st.zero ? "sp-c fixed done" : "sp-c blank"
+  }, st.zero ? 0 : ""))))), st.zero && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "lead " + (st.one ? "past" : "now")
+  }, "\u2464 \u3053\u3093\u3069\u306F\u3001", /*#__PURE__*/React.createElement("b", null, "\u305C\u3093\u3076 1"), " \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "split bulk"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "go" + (st.one ? " on" : ""),
     onClick: () => set({
-      zb: (st.zb || 0) ^ W8[i],
-      zero: true
+      one: true
     })
-  }, (st.zb || 0) & W8[i] ? 1 : 0))), /*#__PURE__*/React.createElement("div", {
-    className: "sp-lab"
   }, "\u305C\u3093\u3076 1"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
   }, ipBits.map((c, i) => i < cut ? /*#__PURE__*/React.createElement("span", {
     key: i,
     className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
-  }, c) : /*#__PURE__*/React.createElement("button", {
+  }, c) : /*#__PURE__*/React.createElement("span", {
     key: i,
-    className: "sp-c" + ((st.ob || 0) & W8[i] ? " on" : ""),
-    onClick: () => set({
-      ob: (st.ob || 0) ^ W8[i],
-      one: true
-    })
-  }, (st.ob || 0) & W8[i] ? 1 : 0))))), (st.zero || st.one) && /*#__PURE__*/React.createElement("div", {
+    className: st.one ? "sp-c fixed done" : "sp-c blank"
+  }, st.one ? 1 : ""))))), (st.zero || st.one) && /*#__PURE__*/React.createElement("div", {
     className: "derive"
   }, st.zero && /*#__PURE__*/React.createElement("div", {
-    className: "d-r"
-  }, /*#__PURE__*/React.createElement("span", null, "\u305C\u3093\u3076 0 \u306B\u3059\u308B\u3068"), /*#__PURE__*/React.createElement("b", null, myNet)), st.one && /*#__PURE__*/React.createElement("div", {
-    className: "d-r"
-  }, /*#__PURE__*/React.createElement("span", null, "\u305C\u3093\u3076 1 \u306B\u3059\u308B\u3068"), /*#__PURE__*/React.createElement("b", null, myBc)), ready && q.goal === "range" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "d-r"
-  }, /*#__PURE__*/React.createElement("span", null, myNet, " \u306F\u4F7F\u3048\u306A\u3044\u3000\uFF0B1"), /*#__PURE__*/React.createElement("b", null, out.split(" 〜 ")[0])), /*#__PURE__*/React.createElement("div", {
-    className: "d-r"
-  }, /*#__PURE__*/React.createElement("span", null, myBc, " \u306F\u4F7F\u3048\u306A\u3044\u3000\u22121"), /*#__PURE__*/React.createElement("b", null, out.split(" 〜 ")[1])), /*#__PURE__*/React.createElement("div", {
-    className: "d-r ans"
+    className: "d-r col"
+  }, /*#__PURE__*/React.createElement("span", null, "\u3044\u3061\u3070\u3093\u5C0F\u3055\u3044\u6570 \uFF1D ", /*#__PURE__*/React.createElement("b", null, "\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u30A2\u30C9\u30EC\u30B9")), /*#__PURE__*/React.createElement("b", null, myNet)), st.one && /*#__PURE__*/React.createElement("div", {
+    className: "d-r col"
+  }, /*#__PURE__*/React.createElement("span", null, "\u3044\u3061\u3070\u3093\u5927\u304D\u3044\u6570 \uFF1D ", /*#__PURE__*/React.createElement("b", null, "\u30D6\u30ED\u30FC\u30C9\u30AD\u30E3\u30B9\u30C8\u30A2\u30C9\u30EC\u30B9")), /*#__PURE__*/React.createElement("b", null, myBc)), ready && q.goal === "range" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "d-r col"
+  }, /*#__PURE__*/React.createElement("span", null, myNet, " \u306F\u4F7F\u3048\u306A\u3044 \u2192 \uFF0B1"), /*#__PURE__*/React.createElement("b", null, out.split(" 〜 ")[0])), /*#__PURE__*/React.createElement("div", {
+    className: "d-r col"
+  }, /*#__PURE__*/React.createElement("span", null, myBc, " \u306F\u4F7F\u3048\u306A\u3044 \u2192 \u22121"), /*#__PURE__*/React.createElement("b", null, out.split(" 〜 ")[1])), /*#__PURE__*/React.createElement("div", {
+    className: "d-r col ans"
   }, /*#__PURE__*/React.createElement("span", null, "\u7B54\u3048"), /*#__PURE__*/React.createElement("b", null, out))))), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: () => onSubmit(out),
@@ -1009,7 +1064,7 @@ function PickBoard({
   const w = value;
   const d = w == null ? null : pickOut(w, q.goal, q.base); // 計算は gen.js に任せる
   const bits = d ? d.bits : null;
-  const out = myNet && myBc ? pairOut(myNet, myBc, q.goal) : "";
+  const out = d ? d.out : "";
   const cell = x => /*#__PURE__*/React.createElement("button", {
     key: x,
     className: "cell wide" + (w === x ? " on" : ""),
@@ -1019,9 +1074,11 @@ function PickBoard({
   }, x));
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
-  }, q.goal === "host" && /*#__PURE__*/React.createElement("div", {
-    className: "lead"
-  }, "\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u30A2\u30C9\u30EC\u30B9\u3068\u30D6\u30ED\u30FC\u30C9\u30AD\u30E3\u30B9\u30C8\u30A2\u30C9\u30EC\u30B9\u306E\u3076\u3093\u3067 \uFF0B2\u3000", /*#__PURE__*/React.createElement("b", null, q.need, " + 2 = ", q.want)), /*#__PURE__*/React.createElement("div", {
+  }, q.goal === "host" ? /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, q.need, "\u53F0 \uFF0B2\uFF08\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u30A2\u30C9\u30EC\u30B9\u3068\u30D6\u30ED\u30FC\u30C9\u30AD\u30E3\u30B9\u30C8\u30A2\u30C9\u30EC\u30B9\u306E\u3076\u3093\uFF09\uFF1D ", /*#__PURE__*/React.createElement("b", null, q.want)) : /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "\u30AF\u30E9\u30B9", q.cls, "\uFF08/", q.base, " \u304B\u3089\uFF09\uFF0F \u5FC5\u8981\u306A\u30B5\u30D6\u30CD\u30C3\u30C8\u6570 ", /*#__PURE__*/React.createElement("b", null, q.want)), /*#__PURE__*/React.createElement("div", {
     className: "lead " + (w != null ? "past" : "now")
   }, /*#__PURE__*/React.createElement("b", null, q.want), " \u304C\u5165\u308B\u3001\u3044\u3061\u3070\u3093\u5C0F\u3055\u3044\u3068\u3053\u308D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "point"
@@ -1044,7 +1101,7 @@ function PickBoard({
   }, /*#__PURE__*/React.createElement("span", null, q.goal === "host" ? "ホスト部" : "サブネットに使う"), /*#__PURE__*/React.createElement("b", null, bits, " \u6841")), q.goal === "subnet" && /*#__PURE__*/React.createElement("div", {
     className: "d-r"
   }, /*#__PURE__*/React.createElement("span", null, "/", q.base, " \u304B\u3089 ", bits, " \u6841 \u306E\u3070\u3059"), /*#__PURE__*/React.createElement("b", null, "/", q.base, " + ", bits)), /*#__PURE__*/React.createElement("div", {
-    className: "d-r ans"
+    className: "d-r col ans"
   }, /*#__PURE__*/React.createElement("span", null, "\u7B54\u3048"), /*#__PURE__*/React.createElement("b", null, out))), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: () => onSubmit(out),
@@ -1118,7 +1175,7 @@ function StackBoard({
   }, /*#__PURE__*/React.createElement("div", {
     className: "d-r"
   }, /*#__PURE__*/React.createElement("span", null, "\u540C\u3058\u306A\u306E\u306F"), /*#__PURE__*/React.createElement("b", null, "\u4E0A\u304B\u3089 ", oc * 8 + cut, " \u6841\u3076\u3093")), /*#__PURE__*/React.createElement("div", {
-    className: "d-r ans"
+    className: "d-r col ans"
   }, /*#__PURE__*/React.createElement("span", null, "\u7B54\u3048"), /*#__PURE__*/React.createElement("b", null, out)))), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: () => onSubmit(out),
@@ -1219,7 +1276,9 @@ function TestBoard({
     const v = calcTotal(st.calc);
     return /*#__PURE__*/React.createElement("div", {
       className: "box"
-    }, /*#__PURE__*/React.createElement(Calc, {
+    }, q.station === "S0" && /*#__PURE__*/React.createElement(WeightTable, {
+      blank: true
+    }), /*#__PURE__*/React.createElement(Calc, {
       plain: q.station === "S0",
       value: st.calc,
       onChange: c => set({
@@ -1290,7 +1349,9 @@ function TestBoard({
         calc: c
       })
     }), /*#__PURE__*/React.createElement("div", {
-      className: "row8"
+      className: "lead now"
+    }, "\u5F15\u3051\u305F\u3068\u3053\u308D\u306B ", /*#__PURE__*/React.createElement("b", null, "1"), "\u3001\u5F15\u3051\u306A\u304B\u3063\u305F\u3068\u3053\u308D\u306B ", /*#__PURE__*/React.createElement("b", null, "0"), "\u3002\u5DE6\u304B\u3089\u5165\u308C\u307E\u3057\u3087\u3046"), /*#__PURE__*/React.createElement("div", {
+      className: "row8 answ"
     }, W.map(w => /*#__PURE__*/React.createElement("button", {
       key: w,
       className: "cell bare" + (bits & w ? " on" : ""),
@@ -1321,7 +1382,7 @@ function TestBoard({
     onClick: () => !locked && set({
       pick: c
     })
-  }, c))), /*#__PURE__*/React.createElement("button", {
+  }, /*#__PURE__*/React.createElement("span", null, c), locked && st.pick === c && c !== String(q.answer) && /*#__PURE__*/React.createElement("i", null, "\u3042\u306A\u305F\u306E\u56DE\u7B54")))), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: () => onSubmit(st.pick),
     disabled: locked || !st.pick
@@ -1371,13 +1432,13 @@ function Result({
   }, "\u3082\u3046\u4E00\u5EA6 \u7DF4\u7FD2\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
     className: "mini",
     onClick: onHome
-  }, "\u30DB\u30FC\u30E0\u3078")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+  }, "\u30C8\u30C3\u30D7\u753B\u9762\u306B\u623B\u308B")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: cleared ? onHome : onAgain
-  }, cleared ? "つづける" : "もう一度"), /*#__PURE__*/React.createElement("button", {
+  }, cleared ? "トップ画面に戻る" : "もう一度"), /*#__PURE__*/React.createElement("button", {
     className: "mini",
     onClick: cleared ? onAgain : onHome
-  }, cleared ? "同じステージをもう一度" : "ホームへ")));
+  }, cleared ? "同じステージをもう一度" : "トップ画面に戻る")));
 }
 
 /* =========================================================================
@@ -1407,24 +1468,6 @@ function App() {
       setSheetOf(station);
       setScreen("drill");
       return;
-    }
-    // 覚える表が無いステージは、説明を見た時点で練習ぶんを済みにする（中間の段を作らない）
-    if (test && !CARDS[station] && !isLit(progress, station)) {
-      const cur = progress[station] || {
-        seen: 0,
-        correct: 0,
-        lit: false,
-        solo: false
-      };
-      const nx = {
-        ...progress,
-        [station]: {
-          ...cur,
-          lit: true
-        }
-      };
-      setProgress(nx);
-      save(nx);
     }
     const first = !progress[station]; // そのステージが初めてか
     const queue = [];
@@ -1539,30 +1582,6 @@ function App() {
     onDrill: () => start(sheetOf, false),
     onTest: () => start(sheetOf, true),
     onHome: () => setScreen("home")
-  }), screen === "drill" && sheetOf && /*#__PURE__*/React.createElement(Drill, {
-    key: sheetOf,
-    station: sheetOf,
-    onHome: () => setScreen("home"),
-    onDone: () => {
-      // 表なしで全部言えたら、覚えたことにする
-      const cur = progress[sheetOf] || {
-        seen: 0,
-        correct: 0,
-        lit: false,
-        solo: false
-      };
-      const next = {
-        ...progress,
-        [sheetOf]: {
-          ...cur,
-          lit: true
-        }
-      };
-      setProgress(next);
-      save(next);
-      setSheetOf(sheetOf);
-      setScreen("memo");
-    }
   }), screen === "play" && plan && /*#__PURE__*/React.createElement(Play, {
     key: runId,
     plan: plan,
@@ -1635,6 +1654,12 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 
 /* 盤 */
 .box{margin-top:2px}
+/* 盤ごと1枚のカード。答え合わせで枠の色が変わり、外すと揺れる */
+.card{border:1.5px solid #21262d;border-radius:16px;padding:14px;margin-top:8px;
+  transition:border-color .2s,box-shadow .2s}
+.card.ok{border-color:#2ea043}
+.card.ng{border-color:#f85149;box-shadow:0 0 12px #2a1315;animation:shake .2s}
+.verdict{border-top:1px solid #21262d;margin-top:16px;padding-top:14px}
 .lead.now{border-left:3px solid #58a6ff;padding-left:9px;color:#e6edf3}
 .lead.past{color:#484f58}
 .lead{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 8px}
@@ -1672,6 +1697,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tick{flex:1;text-align:center;font-size:11px;color:#8b949e}
 .d-lab{width:44px;flex:none;font-size:11px;color:#8b949e;text-align:right;padding-right:6px}
 .row8.tight{gap:3px}
+.row8.answ{margin-bottom:10px}
 .wtable{margin-bottom:14px}
 /* 式と答えのあいだをつなぐ1行 */
 .bridge{display:flex;flex-direction:column;align-items:center;gap:2px;margin:8px 0}
@@ -1680,36 +1706,42 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.big2{font-size:15px;font-weight:800;color:#e6edf3}
 /* 練習の1枚。いちばん下に「テストをする」が貼り付く */
 .sheet-p{padding-bottom:110px}
-.gotest{position:fixed;left:0;right:0;bottom:0;z-index:30;background:#0d1117;
-  border-top:1px solid #21262d;padding:10px 14px calc(10px + env(safe-area-inset-bottom))}
+/* 帯にせず、ボタンだけ浮かせる。中身は本文と同じ幅・同じ余白にそろえる */
+.gotest{position:fixed;left:0;right:0;bottom:0;z-index:30;pointer-events:none;
+  max-width:460px;margin:0 auto;padding:0 8px calc(10px + env(safe-area-inset-bottom))}
 .gotest.two{display:flex;gap:8px}
-.gotest .next{max-width:432px;margin:0 auto;flex:1}
+.gotest .next{flex:1;min-width:0;pointer-events:auto;
+  box-shadow:0 6px 18px #000a}
 .next.ghost{background:#161b22;border:1.5px solid #2ea043;color:#56d364}
 .how{font-size:15px;line-height:1.7;margin-bottom:4px}
-/* 暗記ドリル。合図は1つ、いちばん大きい字で真ん中に */
-.drill{padding-bottom:40px}
 .link1{font-size:13px;color:#8b949e;line-height:1.7;padding:10px 12px;margin-bottom:12px;
   border-left:3px solid #30363d;background:#161b22;border-radius:0 8px 8px 0}
 .rnext{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 4px;text-align:left}
-.dwhy{text-align:center;font-size:13px;color:#8b949e;margin:8px 0 16px;
-  font-family:ui-monospace,Menlo,monospace}
-.dcard{font-size:34px;font-weight:800;text-align:center;padding:22px 8px;margin:16px 0;
-  font-family:ui-monospace,Menlo,monospace;background:#161b22;border:0;border-radius:16px;
-  word-break:break-all}
-.dopts{display:grid;grid-template-columns:1fr;gap:8px}
-.dopt{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:10px 6px;
-  border:1.5px solid #30363d;border-radius:12px;background:#161b22;
-  font-size:17px;font-weight:700;font-family:ui-monospace,Menlo,monospace}
-.dopt.right{border-color:#2ea043;background:#0f2a16;color:#56d364}
-.dopt.ng{border-color:#f85149;color:#ff7b72}
-.dopt i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72}
+/* /28 が何なのかを見せる図。ネットワーク部＝青、ホスト部＝灰、線＝黄 */
+.figure{margin:12px 0 14px;font-family:ui-monospace,Menlo,monospace;text-align:center}
+.fig-h{display:flex;justify-content:space-between;font-size:11px;color:#8b949e;margin-bottom:6px}
+.fig-n{color:#79c0ff}
+.fig-o{color:#8b949e}
+.fig-b{font-size:13px;line-height:1.9;white-space:nowrap}
+.fig-1{color:#79c0ff;background:#132030;padding:2px 1px}
+.fig-0{color:#8b949e;background:#161b22;padding:2px 1px}
+.fig-v{color:#e6edf3;padding:0 10px}
+.fig-d{color:#8b949e}
+.fig-l{display:inline-block;width:3px;height:15px;background:#e3b341;vertical-align:-3px;margin:0 1px}
+.fig-c{font-size:11px;color:#e3b341;margin-top:4px}
+.fig-c.ntw{color:#8b949e;margin-bottom:8px}
+.fig-lab{font-size:11px;color:#8b949e;padding-right:10px}
+.fig-r{font-size:11px;color:#8b949e;padding-left:10px}
 .tut{border-top:1px solid #21262d;padding-top:14px;margin-top:14px}
 .tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
 .dhead.ng{color:#ff7b72}
-.shake{animation:shake .2s}
+.msub2{font-size:13px;color:#8b949e;margin:4px 0 14px}
+.mkind{display:inline-block;font-size:13px;font-weight:800;color:#79c0ff;
+  background:#132030;border:1.5px solid #58a6ff;border-radius:99px;
+  padding:6px 14px;margin-bottom:10px}
 .mtitle{font-size:22px;font-weight:800;margin:6px 0 6px}
 /* 解き方の要点。操作の前に置く言葉は、これ1行だけにする */
 .point{font-size:13px;color:#8b949e;margin-bottom:10px}
@@ -1724,7 +1756,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 押せないものは、枠を持たない。枠があるのに押せないと、押せると思って触ってしまう */
 .num{flex:1;text-align:center;font-size:17px;font-weight:700;
   font-family:ui-monospace,Menlo,monospace;color:#8b949e;padding:8px 2px}
-.num.on{color:#79c0ff}
+.num.on{color:#79c0ff;background:#132030;border-radius:8px}
 .oct.on{border-color:#58a6ff;background:#132030;color:#79c0ff;font-weight:900}
 /* まだ数字が入っていない枠は破線。入ると実線に変わる */
 .oct.blank{border-style:dashed;background:none;color:#484f58}
@@ -1745,6 +1777,15 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .unlock.on{border-color:#58a6ff;color:#79c0ff}
 .split{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
+.sp-c.blank{border-style:dashed;background:none}
+.sp-c.done{color:#79c0ff}
+/* 行ごと押す段。行頭のボタンぶん、左を広くとる */
+.split.bulk{grid-template-columns:64px 1fr}
+.split.bulk .go{min-height:44px;font-size:13px;padding:6px 4px}
+.split.bulk .go.on{border-color:#58a6ff;background:#132030;color:#79c0ff}
+/* 名前と数を同じ行に置くと折り返して崩れるので、縦に積む */
+.d-r.col{display:block}
+.d-r.col b{display:block;margin-top:2px;text-align:left}
 .sp-c.off{color:#484f58}
 .sp-c.sp-c.zero{border-color:#58a6ff;color:#79c0ff}
 .sp-c.sp-lab i{display:block;font-style:normal;color:#8b949e;font-size:11px;margin-top:2px}
@@ -1756,8 +1797,11 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 押せないものは、枠も地の色も持たない。枠があるのに押せないと、押せると思って触ってしまう */
 .sp-c.fixed{display:flex;align-items:center;justify-content:center;color:#e6edf3;
   border-color:transparent;background:none}
-/* 線は「ここまで同じ／ここまでがネットワーク」の意味。だから選んだ桁の**右**に引く */
-.sp-c.edge{box-shadow:3px 0 0 #e3b341}
+/* 線は「ここまで同じ／ここまでがネットワーク」の意味。だから選んだ桁の**右**に引く。
+   丸い枠に影を付けるとカッコのように曲がって見えるので、まっすぐな棒を1本置く */
+.sp-c,.st-c{position:relative}
+.sp-c.edge::after,.st-c.edge::after{content:"";position:absolute;right:-3px;top:2px;bottom:2px;
+  width:2px;background:#e3b341;border-radius:1px}
 .sp-row.w{grid-template-columns:repeat(8,1fr)}
 .sp-row.w9{grid-template-columns:repeat(9,1fr)}
 .sp-row.w9 .sp-c{font-size:11px}
@@ -1778,7 +1822,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .st-c{height:44px;border:1px solid #30363d;border-radius:7px;background:#161b22;
   font-size:15px;font-family:ui-monospace,Menlo,monospace;color:#8b949e;padding:0}
 .st-c.same{background:#132030;color:#79c0ff;font-weight:800}
-.st-c.edge{box-shadow:3px 0 0 #e3b341}
+
 
 .next{display:block;width:100%;padding:16px;border-radius:12px;background:#238636;
   color:#fff;font-size:17px;font-weight:700;margin-top:16px}
@@ -1793,7 +1837,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   padding:11px 14px;margin-bottom:16px;font-size:13px;color:#e3b341;text-align:center}
 .cell.bare{aspect-ratio:1/1.1}
 .choices{display:flex;flex-direction:column;gap:9px}
-.ch{width:100%;min-height:56px;padding:14px;border:1.5px solid #30363d;border-radius:12px;
+.ch i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72;margin-left:10px}
+.ch{display:flex;align-items:center;justify-content:center;width:100%;min-height:56px;padding:14px;border:1.5px solid #30363d;border-radius:12px;
   background:#161b22;font-size:17px;font-family:ui-monospace,Menlo,monospace;
   word-break:break-all;transition:.15s}
 .ch.on{border-color:#58a6ff;background:#132030;color:#79c0ff;font-weight:800}
@@ -1801,7 +1846,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .ch.wrong{border-color:#f85149;background:#2a1315;color:#ff7b72;font-weight:700}
 
 /* 計算するところ。＋と− だけ */
-.calc{margin-top:18px}
+.calc{margin-bottom:20px;margin-top:18px}
 .calc-d{background:#0f141b;border:0;border-radius:12px;
   padding:12px 14px;margin-bottom:8px;text-align:right}
 .calc-e{font-size:15px;color:#8b949e;font-family:ui-monospace,Menlo,monospace;
@@ -1824,22 +1869,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .step-v{font-size:14.5px;font-weight:600;font-family:ui-monospace,Menlo,monospace;
   word-break:break-all;line-height:1.6}
 /* 答え合わせの帯（画面のいちばん下に貼り付く） */
-.judge{position:fixed;left:0;right:0;bottom:0;z-index:40;border-top:2px solid;
-  padding:12px 14px calc(12px + env(safe-area-inset-bottom));animation:up .18s ease-out}
-.judge.ok{background:#0f2a16;border-color:#2ea043;cursor:pointer}
-.judge.ng{background:#2a1315;border-color:#f85149}
-.j-in{max-width:460px;margin:0 auto}
-.j-head{display:flex;align-items:center;gap:10px}
-.j-mark{font-size:34px;line-height:1;font-weight:800}
-.j-word{font-size:17px;font-weight:800}
-.judge.ok .j-mark,.judge.ok .j-word{color:#56d364}
-.judge.ng .j-mark,.judge.ng .j-word{color:#ff7b72}
-.j-ans{font-size:15px;margin-top:6px;color:#e6edf3}
 .j-ans b{font-size:17px;font-family:ui-monospace,Menlo,monospace}
 .j-tip{font-size:13px;color:#8b949e;margin-top:6px}
-.judge .next{margin-top:10px}
 /* 帯のぶん、下に余白を空けて盤が隠れないようにする */
-.lit-ok,.lit-ng{padding-bottom:180px}
+
 @keyframes pop{from{transform:scale(.4);opacity:0}to{transform:scale(1);opacity:1}}
 @keyframes shake{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
 @keyframes up{from{transform:translateY(100%)}to{transform:translateY(0)}}
