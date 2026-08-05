@@ -275,7 +275,7 @@ function Play({
     className: "prompt"
   }, q.prompt), plan.test && /*#__PURE__*/React.createElement("div", {
     className: "testnote"
-  }, "\u899A\u3048\u305F\u8868\u3092\u601D\u3044\u51FA\u3057\u3066\u7B54\u3048\u307E\u3059"), plan.test ? /*#__PURE__*/React.createElement(TestBoard, board) : q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged === false && /*#__PURE__*/React.createElement("div", {
+  }, "\u899A\u3048\u305F\u8868\u3092\u601D\u3044\u51FA\u3057\u3066\u7B54\u3048\u307E\u3059"), !plan.test && q.station === "S1" && /*#__PURE__*/React.createElement(WeightTable, null), plan.test || q.station === "S1" ? /*#__PURE__*/React.createElement(TestBoard, board) : q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged === false && /*#__PURE__*/React.createElement("div", {
     className: "why",
     ref: why
   }, /*#__PURE__*/React.createElement("div", {
@@ -484,6 +484,27 @@ function Memo({
     className: "next ghost",
     onClick: onTest
   }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B")));
+}
+
+/** 桁の重み表。教材の「2進数の桁の重みの表」そのまま。押せない（見るだけ）。 */
+function WeightTable() {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "split wtable"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sp-lab"
+  }, "2\u306E"), /*#__PURE__*/React.createElement("div", {
+    className: "sp-row"
+  }, [7, 6, 5, 4, 3, 2, 1, 0].map(n => /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: "sp-c fixed"
+  }, n, "\u4E57"))), /*#__PURE__*/React.createElement("div", {
+    className: "sp-lab"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "sp-row"
+  }, [7, 6, 5, 4, 3, 2, 1, 0].map(n => /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: "sp-c fixed big2"
+  }, Math.pow(2, n)))));
 }
 
 /* ── 盤 ワイルドカードマスク ────────────────────────────
@@ -1530,6 +1551,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tick{flex:1;text-align:center;font-size:11px;color:#8b949e}
 .d-lab{width:44px;flex:none;font-size:11px;color:#8b949e;text-align:right;padding-right:6px}
 .row8.tight{gap:3px}
+.wtable{margin-bottom:14px}
 .sp-c.big2{font-size:15px;font-weight:800;color:#e6edf3}
 /* 練習の1枚。いちばん下に「テストをする」が貼り付く */
 .sheet-p{padding-bottom:110px}

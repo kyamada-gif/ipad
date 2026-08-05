@@ -201,7 +201,10 @@ function Play({ plan, onDone, onQuit }) {
 
       {plan.test && <div className="testnote">覚えた表を思い出して答えます</div>}
 
-      {plan.test ? <TestBoard {...board} />
+      {/* 2ステージの練習は、テストと同じ形（自分で計算して打ち込む）に、
+          桁の重み表を足したもの。表を押すと答えが出る形にすると、機械が合計してしまう */}
+      {!plan.test && q.station === "S1" && <WeightTable />}
+      {plan.test || q.station === "S1" ? <TestBoard {...board} />
         : q.input === "pow" ? <PowBoard {...board} />
         : q.input === "mask" ? <MaskBoard {...board} />
         : q.input === "sum" ? <SumBoard {...board} />
@@ -390,6 +393,22 @@ function Memo({ station, onDrill, onTest, onHome }) {
       <div className="gotest two">
         <button className="next" onClick={onDrill}>練習をする</button>
         <button className="next ghost" onClick={onTest}>テストをする</button>
+      </div>
+    </div>
+  );
+}
+
+/** 桁の重み表。教材の「2進数の桁の重みの表」そのまま。押せない（見るだけ）。 */
+function WeightTable() {
+  return (
+    <div className="split wtable">
+      <div className="sp-lab">2の</div>
+      <div className="sp-row">
+        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed">{n}乗</span>)}
+      </div>
+      <div className="sp-lab" />
+      <div className="sp-row">
+        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed big2">{Math.pow(2, n)}</span>)}
       </div>
     </div>
   );
@@ -1181,6 +1200,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tick{flex:1;text-align:center;font-size:11px;color:#8b949e}
 .d-lab{width:44px;flex:none;font-size:11px;color:#8b949e;text-align:right;padding-right:6px}
 .row8.tight{gap:3px}
+.wtable{margin-bottom:14px}
 .sp-c.big2{font-size:15px;font-weight:800;color:#e6edf3}
 /* 練習の1枚。いちばん下に「テストをする」が貼り付く */
 .sheet-p{padding-bottom:110px}
