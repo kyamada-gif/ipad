@@ -694,6 +694,8 @@ function makeQuestion(stationId, ease, test, goal) {
   for (let i = 0; goal && q.goal !== goal && i < 60; i++) q = g(ease);
   if (test) {
     q.test = true;
+    // プレフィックス長↔サブネットマスクは、自分で書く（選ぶと消去法で当たる）
+    if (stationId === "S8") return q;
     const w = wrongsOf(q).filter((x) => x && x !== q.answer);
     if (w.length) {
       const out = [String(q.answer)];

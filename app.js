@@ -134,13 +134,15 @@ function Home({
       }
     }, /*#__PURE__*/React.createElement("span", {
       className: "lamp"
-    }, open ? solo ? "🏅" : lit ? "●" : "○" : "🔒"), /*#__PURE__*/React.createElement("span", {
+    }, open ? lit ? "●" : "○" : "🔒"), /*#__PURE__*/React.createElement("span", {
       className: "t-b"
     }, /*#__PURE__*/React.createElement("span", {
       className: "t-name"
     }, s.no, "\u3000", s.name), /*#__PURE__*/React.createElement("span", {
       className: "t-ex"
-    }, s.ex))), pick === s.id && open && /*#__PURE__*/React.createElement("div", {
+    }, s.ex)), /*#__PURE__*/React.createElement("span", {
+      className: "slot" + (solo ? " got" : "")
+    }, solo ? "🏅" : "")), pick === s.id && open && /*#__PURE__*/React.createElement("div", {
       className: "t-go"
     }, /*#__PURE__*/React.createElement("button", {
       className: "go",
@@ -508,6 +510,27 @@ function Memo({
     className: "next ghost",
     onClick: onTest
   }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B")));
+}
+
+/** 桁の重み表。教材の「2進数の桁の重みの表」そのまま。押せない（見るだけ）。 */
+function WeightTable() {
+  return /*#__PURE__*/React.createElement("div", {
+    className: "split wtable"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sp-lab"
+  }, "2\u306E"), /*#__PURE__*/React.createElement("div", {
+    className: "sp-row"
+  }, [7, 6, 5, 4, 3, 2, 1, 0].map(n => /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: "sp-c fixed"
+  }, n, "\u4E57"))), /*#__PURE__*/React.createElement("div", {
+    className: "sp-lab"
+  }), /*#__PURE__*/React.createElement("div", {
+    className: "sp-row"
+  }, [7, 6, 5, 4, 3, 2, 1, 0].map(n => /*#__PURE__*/React.createElement("span", {
+    key: n,
+    className: "sp-c fixed big2"
+  }, Math.pow(2, n)))));
 }
 
 /* ── 盤 ワイルドカードマスク ────────────────────────────
@@ -1180,6 +1203,55 @@ function TestBoard({
       disabled: locked || !st.calc
     }, v, " \u3067\u6C7A\u5B9A"));
   }
+  if (q.station === "S8") {
+    // 選ぶと消去法で当たってしまう。**自分で書く。**
+    // サブネットマスクは4つの数、プレフィックス長は1つの数
+    const slot = st.slot == null ? 0 : st.slot;
+    const parts = st.parts || [null, null, null, null];
+    const v = calcTotal(st.calc);
+    const toMask = q.goal === "toMask";
+    const out = toMask ? parts.join(".") : `/${v}`;
+    const done = toMask ? parts.every(x => x != null) : !!st.calc;
+    return /*#__PURE__*/React.createElement("div", {
+      className: "box"
+    }, /*#__PURE__*/React.createElement(WeightTable, null), toMask && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "lead"
+    }, "\u6253\u3061\u3053\u3080\u3068\u3053\u308D\u3092\u62BC\u3057\u3066\u304B\u3089\u3001\u6570\u5B57\u3092\u5165\u308C\u308B"), /*#__PURE__*/React.createElement("div", {
+      className: "dots"
+    }, parts.map((x, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "dot"
+    }, "."), /*#__PURE__*/React.createElement("button", {
+      className: "oct" + (slot === i ? " on" : ""),
+      onClick: () => !locked && set({
+        slot: i,
+        calc: null
+      })
+    }, x == null ? "—" : x))))), /*#__PURE__*/React.createElement(Calc, {
+      plain: true,
+      value: st.calc,
+      onChange: c => {
+        const t = c ? c.nums.reduce((a, n, i) => i === 0 ? n : c.ops[i - 1] === "−" ? a - n : a + n, 0) : 0;
+        if (!toMask) {
+          set({
+            calc: c
+          });
+          return;
+        }
+        const n2 = parts.slice();
+        n2[slot] = t;
+        set({
+          calc: c,
+          parts: n2
+        });
+      }
+    }), /*#__PURE__*/React.createElement("button", {
+      className: "next",
+      onClick: () => onSubmit(out),
+      disabled: locked || !done
+    }, toMask ? done ? `${out} で決定` : "4つとも入れてください" : `/${v} で決定`));
+  }
   if (q.station === "S2") {
     const bits = st.bits || 0;
     const W = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -1566,6 +1638,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tick{flex:1;text-align:center;font-size:11px;color:#8b949e}
 .d-lab{width:44px;flex:none;font-size:11px;color:#8b949e;text-align:right;padding-right:6px}
 .row8.tight{gap:3px}
+.wtable{margin-bottom:14px}
 .sp-c.big2{font-size:15px;font-weight:800;color:#e6edf3}
 /* 練習の1枚。いちばん下に「テストをする」が貼り付く */
 .sheet-p{padding-bottom:110px}
@@ -1624,6 +1697,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sub{font-size:13px;color:#8b949e;margin:-4px 0 8px}
 /* ステージの札。上が名前、下が「練習する」「テストをする」の2つ */
 .t-h{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:48px}
+.slot{flex:0 0 auto;width:44px;height:44px;border:1.5px dashed #30363d;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:22px}
+.slot.got{border-style:solid;border-color:#e3b341;background:#1a170f}
 .tile.pick{border-color:#58a6ff}
 .t-go{display:flex;gap:8px;margin-top:10px}
 .go{flex:1;min-height:44px;padding:10px 6px;border:1px solid #30363d;border-radius:10px;

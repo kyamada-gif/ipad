@@ -82,11 +82,13 @@ function Home({ progress, unlock, onUnlock, onStart }) {
               <div className={"tile" + (open ? "" : " locked") + (lit ? " lit" : "") + (solo ? " solo" : "")
                 + (pick === s.id ? " pick" : "")}>
                 <button className="t-h" onClick={() => { setPick(pick === s.id ? null : s.id); setBlocked(null); }}>
-                  <span className="lamp">{open ? (solo ? "🏅" : lit ? "●" : "○") : "🔒"}</span>
+                  <span className="lamp">{open ? (lit ? "●" : "○") : "🔒"}</span>
                   <span className="t-b">
                     <span className="t-name">{s.no}　{s.name}</span>
                     <span className="t-ex">{s.ex}</span>
                   </span>
+                  {/* バッジの置き場。テストに合格するまでは空の枠のまま */}
+                  <span className={"slot" + (solo ? " got" : "")}>{solo ? "🏅" : ""}</span>
                 </button>
                 {pick === s.id && open && (
                   <div className="t-go">
@@ -410,6 +412,22 @@ function Memo({ station, onDrill, onTest, onHome }) {
       <div className="gotest two">
         <button className="next" onClick={onDrill}>練習をする</button>
         <button className="next ghost" onClick={onTest}>テストをする</button>
+      </div>
+    </div>
+  );
+}
+
+/** 桁の重み表。教材の「2進数の桁の重みの表」そのまま。押せない（見るだけ）。 */
+function WeightTable() {
+  return (
+    <div className="split wtable">
+      <div className="sp-lab">2の</div>
+      <div className="sp-row">
+        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed">{n}乗</span>)}
+      </div>
+      <div className="sp-lab" />
+      <div className="sp-row">
+        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed big2">{Math.pow(2, n)}</span>)}
       </div>
     </div>
   );
@@ -937,6 +955,44 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
     );
   }
 
+  if (q.station === "S8") {
+    // 選ぶと消去法で当たってしまう。**自分で書く。**
+    // サブネットマスクは4つの数、プレフィックス長は1つの数
+    const slot = st.slot == null ? 0 : st.slot;
+    const parts = st.parts || [null, null, null, null];
+    const v = calcTotal(st.calc);
+    const toMask = q.goal === "toMask";
+    const out = toMask ? parts.join(".") : `/${v}`;
+    const done = toMask ? parts.every((x) => x != null) : !!st.calc;
+    return (
+      <div className="box">
+        <WeightTable />
+        {toMask && (
+          <>
+            <div className="lead">打ちこむところを押してから、数字を入れる</div>
+            <div className="dots">
+              {parts.map((x, i) => (
+                <React.Fragment key={i}>
+                  {i > 0 && <span className="dot">.</span>}
+                  <button className={"oct" + (slot === i ? " on" : "")}
+                    onClick={() => !locked && set({ slot: i, calc: null })}>{x == null ? "—" : x}</button>
+                </React.Fragment>
+              ))}
+            </div>
+          </>
+        )}
+        <Calc plain value={st.calc} onChange={(c) => {
+          const t = c ? c.nums.reduce((a, n, i) => (i === 0 ? n : c.ops[i - 1] === "−" ? a - n : a + n), 0) : 0;
+          if (!toMask) { set({ calc: c }); return; }
+          const n2 = parts.slice(); n2[slot] = t; set({ calc: c, parts: n2 });
+        }} />
+        <button className="next" onClick={() => onSubmit(out)} disabled={locked || !done}>
+          {toMask ? (done ? `${out} で決定` : "4つとも入れてください") : `/${v} で決定`}
+        </button>
+      </div>
+    );
+  }
+
   if (q.station === "S2") {
     const bits = st.bits || 0;
     const W = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -1218,6 +1274,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tick{flex:1;text-align:center;font-size:11px;color:#8b949e}
 .d-lab{width:44px;flex:none;font-size:11px;color:#8b949e;text-align:right;padding-right:6px}
 .row8.tight{gap:3px}
+.wtable{margin-bottom:14px}
 .sp-c.big2{font-size:15px;font-weight:800;color:#e6edf3}
 /* 練習の1枚。いちばん下に「テストをする」が貼り付く */
 .sheet-p{padding-bottom:110px}
@@ -1276,6 +1333,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sub{font-size:13px;color:#8b949e;margin:-4px 0 8px}
 /* ステージの札。上が名前、下が「練習する」「テストをする」の2つ */
 .t-h{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:48px}
+.slot{flex:0 0 auto;width:44px;height:44px;border:1.5px dashed #30363d;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;font-size:22px}
+.slot.got{border-style:solid;border-color:#e3b341;background:#1a170f}
 .tile.pick{border-color:#58a6ff}
 .t-go{display:flex;gap:8px;margin-top:10px}
 .go{flex:1;min-height:44px;padding:10px 6px;border:1px solid #30363d;border-radius:10px;
