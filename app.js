@@ -223,7 +223,7 @@ function Play({
     const slipped = String(out).startsWith("__slip__:");
     const real = slipped ? String(out).slice(9) : String(out);
     const ok = !slipped && real === String(q.answer);
-    setSlip(slipped && real === String(q.answer)); // 最後は合っていたが、途中で外した
+    setSlip(slipped); // 手順テストで、途中で外した
     setJudged(ok);
     buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
@@ -338,7 +338,7 @@ function Tutorial({
     const slipped = String(out).startsWith("__slip__:");
     const real = slipped ? String(out).slice(9) : String(out);
     const ok = !slipped && real === String(q.answer);
-    setSlip(slipped && real === String(q.answer)); // 最後は合っていたが、途中で外した
+    setSlip(slipped); // 手順テストで、途中で外した
     setJudged(ok);
     buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
@@ -1374,6 +1374,16 @@ function TestBoard({
     const miss = () => set({
       bad: true
     });
+    // そのフェーズだけ、やり直す（問題ごと最初に戻さない）
+    const again = () => set(doneAsk ? {
+      bad: false,
+      oct: null,
+      bits: 0,
+      step2: false
+    } : {
+      bad: false,
+      picked: null
+    });
     const pick = a => {
       if (doneAsk) return;
       if (a === round.ok) set({
@@ -1448,7 +1458,12 @@ function TestBoard({
       key: a,
       className: "ch" + (picked === a ? a === round.ok ? " right" : " wrong" : ""),
       onClick: () => pick(a)
-    }, a))), doneAsk && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    }, a))), st.bad && !doneAsk && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "dhead ng"
+    }, "\u2715 \u3061\u304C\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
+      className: "next retry",
+      onClick: again
+    }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6")), doneAsk && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "lead now"
     }, st.step2 ? "つぎは、おなじ並びで、ぜんぶ 1 にする" : round.todo), round.kind === "oct" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "dots"
@@ -1475,7 +1490,20 @@ function TestBoard({
         bad: false
       })
     }, v))))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "row8"
+      className: "split"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "sp-lab"
+    }, "2\u306E"), /*#__PURE__*/React.createElement("div", {
+      className: "sp-row"
+    }, [7, 6, 5, 4, 3, 2, 1, 0].map(n => /*#__PURE__*/React.createElement("span", {
+      key: n,
+      className: "sp-c fixed"
+    }, n, "\u4E57")))), /*#__PURE__*/React.createElement("div", {
+      className: "split"
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "sp-lab"
+    }), /*#__PURE__*/React.createElement("div", {
+      className: "row8 tight"
     }, W8.map(w => /*#__PURE__*/React.createElement("button", {
       key: w,
       className: "cell bare" + (bits & w ? " on" : ""),
@@ -1485,18 +1513,19 @@ function TestBoard({
       })
     }, /*#__PURE__*/React.createElement("span", {
       className: "c-v"
-    }, bits & w ? 1 : 0)))), /*#__PURE__*/React.createElement("div", {
+    }, bits & w ? 1 : 0))))), /*#__PURE__*/React.createElement("div", {
       className: "out"
     }, /*#__PURE__*/React.createElement("span", {
       className: "o-n"
-    }, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, sum)))), st.bad && /*#__PURE__*/React.createElement("div", {
+    }, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, sum)))), st.bad ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
       className: "dhead ng"
     }, "\u2715 \u3061\u304C\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
+      className: "next retry",
+      onClick: again
+    }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6")) : /*#__PURE__*/React.createElement("button", {
       className: "next",
       onClick: doIt
-    }, "\u3067\u304D\u305F")), st.bad && !doneAsk && /*#__PURE__*/React.createElement("div", {
-      className: "dhead ng"
-    }, "\u2715 \u3061\u304C\u3044\u307E\u3059"));
+    }, "\u3067\u304D\u305F")));
   }
   if (q.station === "S2") {
     const bits = st.bits || 0;

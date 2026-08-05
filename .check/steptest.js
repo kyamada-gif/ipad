@@ -74,12 +74,19 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
     click(tile.querySelector(".t-h")); await wait(50);
     click(tile.querySelectorAll(".go")[1]); await wait(150);
     const q = w.__q;
-    // 1つ目の手順で、わざと外れを選ぶ
+    // 1つ目の手順で、わざと外れを選ぶ → その場でミス判定になり、次の問題へ行けるはず
     const wrong = $$(".ch").find((c) => c.textContent.trim() !== q.steps5[0].ok);
-    click(wrong); await wait(60);
-    const showedNg = !!$(".dhead.ng");
-    const stillAsk = $$(".ch").length === 4 && !$(".row8") && !$("button.oct");
-    // 選び直して、あとは正しく進める
+    click(wrong); await wait(150);
+    console.log($(".dhead.ng") ? "  外した手順に ✕ が出た" : "  ✗ ✕ が出ない");
+    const rt = $$("button").find((b) => b.textContent.includes("もう一度"));
+    console.log(rt ? "  「もう一度」が出た" : "  ✗ もう一度 が出ない");
+    if (rt) {
+      const before = w.__q;
+      click(rt); await wait(120);
+      console.log(w.__q === before ? "  同じ問題のまま（そのフェーズだけやり直し）" : "  ✗ 問題が変わった");
+      console.log($$(".ch").length === 4 && !$(".dhead") ? "  手順を選び直せる" : "  ✗ 選び直せない");
+    }
+    // 選び直して最後まで進めると、途中で外したぶん ✕ になる
     for (const round of q.steps5) {
       click($$(".ch").find((c) => c.textContent.trim() === round.ok)); await wait(60);
       if (round.kind === "oct") { click($$("button.oct")[round.want]); await wait(40); }
@@ -95,14 +102,8 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
       }
     }
     click($$(".ch").find((c) => c.textContent.trim() === String(q.answer))); await wait(40);
-    click($$("button").find((b) => b.textContent.includes("これで決定"))); await wait(120);
-    const gotNg = !!$(".dhead.ng");
-    console.log(showedNg ? "  外した手順に ✕ が出た" : "  ✗ 外しても ✕ が出ない");
-    console.log(stillAsk ? "  外れの処理は実行させなかった" : "  ✗ 外れの処理を実行してしまった");
-    console.log(gotNg ? "  最後に正解を選んでも ✕（途中で外したから）" : "  ✗ 途中で外したのに正解になった");
-    const msg = $(".dhead") ? $(".dhead").textContent : "";
-    console.log(msg.includes("とちゅう") ? "  「とちゅうでまちがえました」と出た" : `  ✗ 言い方が違う（${msg}）`);
-    const rows = $$(".donerow").length;
-    console.log(rows === 3 ? "  済んだ処理が3つ残っている" : `  ✗ 済んだ処理が ${rows} つしか残っていない`);
+    click($$("button").find((b) => b.textContent.includes("これで決定"))); await wait(150);
+    const m2 = $(".dhead") ? $(".dhead").textContent : "";
+    console.log(m2.includes("とちゅう") ? "  最後まで進めても ✕ とちゅうでまちがえました" : `  ✗ 判定が違う（${m2}）`);
   }
 })();

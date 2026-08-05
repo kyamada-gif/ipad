@@ -168,7 +168,7 @@ function Play({ plan, onDone, onQuit }) {
     const slipped = String(out).startsWith("__slip__:");
     const real = slipped ? String(out).slice(9) : String(out);
     const ok = !slipped && real === String(q.answer);
-    setSlip(slipped && real === String(q.answer));   // 最後は合っていたが、途中で外した
+    setSlip(slipped);   // 手順テストで、途中で外した
     setJudged(ok); buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some((r) => r.idx === idx);
@@ -276,7 +276,7 @@ function Tutorial({ station, goal, lead, onSolved }) {
     const slipped = String(out).startsWith("__slip__:");
     const real = slipped ? String(out).slice(9) : String(out);
     const ok = !slipped && real === String(q.answer);
-    setSlip(slipped && real === String(q.answer));   // 最後は合っていたが、途中で外した
+    setSlip(slipped);   // 手順テストで、途中で外した
     setJudged(ok); buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
     // 押した直後に、判定が目に入るようにする（スクロールしないと見えないのを防ぐ）
@@ -1116,6 +1116,10 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
     const picked = st.picked || null, doneAsk = st.doneAsk || false;
     const bits = st.bits || 0, sum = W8.reduce((a, w) => a + (bits & w ? w : 0), 0);
     const miss = () => set({ bad: true });
+    // そのフェーズだけ、やり直す（問題ごと最初に戻さない）
+    const again = () => set(doneAsk
+      ? { bad: false, oct: null, bits: 0, step2: false }
+      : { bad: false, picked: null });
     const pick = (a) => {
       if (doneAsk) return;
       if (a === round.ok) set({ picked: a, doneAsk: true, bad: false });
@@ -1155,6 +1159,12 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
               onClick={() => pick(a)}>{a}</button>
           ))}
         </div>
+        {st.bad && !doneAsk && (
+          <>
+            <div className="dhead ng">✕ ちがいます</div>
+            <button className="next retry" onClick={again}>🔁 もう一度</button>
+          </>
+        )}
         {doneAsk && (
           <>
             <div className="lead now">{st.step2 ? "つぎは、おなじ並びで、ぜんぶ 1 にする" : round.todo}</div>
@@ -1174,22 +1184,36 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
               </>
             ) : (
               <>
-                <div className="row8">
-                  {W8.map((w) => (
-                    <button key={w} className={"cell bare" + (bits & w ? " on" : "")}
-                      onClick={() => set({ bits: bits & w ? bits - w : bits + w, bad: false })}>
-                      <span className="c-v">{bits & w ? 1 : 0}</span>
-                    </button>
-                  ))}
+                {/* 2の◯乗は、押すところの**上**に置く。どの桁を押すのかが見える。
+                    **重み（128 64 …）は出さない** ＝ その数を思い出すのは自分の仕事 */}
+                <div className="split">
+                  <div className="sp-lab">2の</div>
+                  <div className="sp-row">
+                    {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed">{n}乗</span>)}
+                  </div>
+                </div>
+                <div className="split">
+                  <div className="sp-lab" />
+                  <div className="row8 tight">
+                    {W8.map((w) => (
+                      <button key={w} className={"cell bare" + (bits & w ? " on" : "")}
+                        onClick={() => set({ bits: bits & w ? bits - w : bits + w, bad: false })}>
+                        <span className="c-v">{bits & w ? 1 : 0}</span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
                 <div className="out"><span className="o-n">この8つ ＝ <b>{sum}</b></span></div>
               </>
             )}
-            {st.bad && <div className="dhead ng">✕ ちがいます</div>}
-            <button className="next" onClick={doIt}>できた</button>
+            {st.bad
+              ? <>
+                  <div className="dhead ng">✕ ちがいます</div>
+                  <button className="next retry" onClick={again}>🔁 もう一度</button>
+                </>
+              : <button className="next" onClick={doIt}>できた</button>}
           </>
         )}
-        {st.bad && !doneAsk && <div className="dhead ng">✕ ちがいます</div>}
       </div>
     );
   }
