@@ -204,7 +204,6 @@ function Play({ plan, onDone, onQuit }) {
       </div>
       <div className="prompt">{q.prompt}</div>
 
-      {plan.test && <div className="testnote">覚えた表を思い出して答えます</div>}
 
       {/* ── 答え合わせ ──────────────────────────────────
           lpic-reflex と同じ作り。**盤ごと1枚のカードにして、その中で答え合わせをする。**

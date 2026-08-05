@@ -271,9 +271,7 @@ function Play({
     className: g.u != null ? j === g.u ? "u" : "" : c === q.underline ? "u" : ""
   }, c)) : g.v)))), /*#__PURE__*/React.createElement("div", {
     className: "prompt"
-  }, q.prompt), plan.test && /*#__PURE__*/React.createElement("div", {
-    className: "testnote"
-  }, "\u899A\u3048\u305F\u8868\u3092\u601D\u3044\u51FA\u3057\u3066\u7B54\u3048\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  }, q.prompt), /*#__PURE__*/React.createElement("div", {
     className: "card" + (judged === null ? "" : judged ? " ok" : " ng"),
     ref: why
   }, plan.test ? /*#__PURE__*/React.createElement(TestBoard, board) : q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : q.input === "wild" ? /*#__PURE__*/React.createElement(WildBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged !== null && /*#__PURE__*/React.createElement("div", {
