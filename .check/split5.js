@@ -22,6 +22,27 @@ const W8=[128,64,32,16,8,4,2,1];
     click(tile.querySelector(".t-h")); await wait(50);
     click(tile.querySelector(".go")); await wait(100);
     click($$(".gotest button")[0]); await wait(150);   // 練習（盤）へ
+    // 練習の前の2問は手順つき。盤を見たいので、そこは通過する
+    for (let g = 0; g < 3 && w.__q && w.__q.steps5; g++) {
+      const sq = w.__q;
+      for (const round of sq.steps5) {
+        click($$(".ch").find((c) => c.textContent.trim() === round.ok)); await wait(50);
+        if (round.kind === "oct") { click($$("button.oct")[round.want]); await wait(30); }
+        else for (let i = 0; i < 8; i++) if (round.want & W8[i]) { click($$(".row8 button.cell")[i]); await wait(12); }
+        click($$("button").find((b) => b.textContent.includes("次へ進む"))); await wait(50);
+        if (round.kind === "fill") {
+          const cur = $$(".row8 button.cell");
+          for (let i = 0; i < 8; i++) {
+            const on = cur[i].className.includes(" on"), want = !!(round.want2 & W8[i]);
+            if (on !== want) { click(cur[i]); await wait(12); }
+          }
+          click($$("button").find((b) => b.textContent.includes("次へ進む"))); await wait(50);
+        }
+      }
+      click($$(".ch").find((c) => c.textContent.trim() === String(sq.answer))); await wait(30);
+      click($$("button").find((b) => b.textContent.includes("これで決定"))); await wait(100);
+      click($$("button").find((b) => b.textContent.includes("次へ"))); await wait(100);
+    }
     const q=w.__q; n++;
     const len=q.board.len, oc=cutOct(len), cb=cutBit(len);
     click($$("button.oct")[oc]); await wait(40);

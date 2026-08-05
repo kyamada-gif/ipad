@@ -215,7 +215,7 @@ function Play({ plan, onDone, onQuit }) {
           枠の色が変わり、外したときはカードごと揺れる。画面の外に出ないよう、
           押した直後にここまで自動で送る。 */}
       <div className={"card" + (judged === null ? "" : judged ? " ok" : " ng")} ref={why}>
-        {plan.test ? <TestBoard {...board} />
+        {plan.test || q.steps5 ? <TestBoard {...board} />
           : q.input === "pow" ? <PowBoard {...board} />
           : q.input === "mask" ? <MaskBoard {...board} />
           : q.input === "sum" ? <SumBoard {...board} />
@@ -430,7 +430,7 @@ function WeightTable({ blank }) {
     <div className="split wtable">
       <div className="sp-lab">2の</div>
       <div className="sp-row">
-        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed">{n}乗</span>)}
+        {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed pw">{n}乗</span>)}
       </div>
       <div className="sp-lab" />
       <div className="sp-row">
@@ -1189,7 +1189,7 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
                 <div className="split">
                   <div className="sp-lab">2の</div>
                   <div className="sp-row">
-                    {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed">{n}乗</span>)}
+                    {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed pw">{n}乗</span>)}
                   </div>
                 </div>
                 <div className="split">
@@ -1211,7 +1211,7 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
                   <div className="dhead ng">✕ ちがいます</div>
                   <button className="next retry" onClick={again}>🔁 もう一度</button>
                 </>
-              : <button className="next" onClick={doIt}>できた</button>}
+              : <button className="next" onClick={doIt}>次へ進む</button>}
           </>
         )}
       </div>
@@ -1252,17 +1252,30 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
       {q.input === "split" && (
         <>
           <div className="sub">メモ（使っても使わなくてもよい。採点しません）</div>
-          <div className="row8">
-            {W8.map((w) => (
-              <button key={w} className={"cell bare" + ((st.memo || 0) & w ? " on" : "")}
-                onClick={() => !locked && set({ memo: (st.memo || 0) ^ w })}>
-                <span className="c-v">{(st.memo || 0) & w ? 1 : 0}</span>
-              </button>
-            ))}
+          {/* 練習と同じ形。2の◯乗は押すところの上。重み（128 64 …）は出さない */}
+          <div className="split">
+            <div className="sp-lab">2の</div>
+            <div className="sp-row">
+              {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed pw">{n}乗</span>)}
+            </div>
+          </div>
+          <div className="split">
+            <div className="sp-lab" />
+            <div className="row8 tight">
+              {W8.map((w) => (
+                <button key={w} className={"cell bare" + ((st.memo || 0) & w ? " on" : "")}
+                  onClick={() => !locked && set({ memo: (st.memo || 0) ^ w })}>
+                  <span className="c-v">{(st.memo || 0) & w ? 1 : 0}</span>
+                </button>
+              ))}
+            </div>
           </div>
           {!!st.memo && (
             <div className="out"><span className="o-n">この8つ ＝ <b>{W8.reduce((a, w) => a + (st.memo & w ? w : 0), 0)}</b></span></div>
           )}
+          {/* 本番の会場で渡されるボードの代わり。何を書いてもよい */}
+          <textarea className="scratch" rows="3" placeholder="ここに書けます"
+            value={st.note || ""} onChange={(e) => !locked && set({ note: e.target.value })} />
         </>
       )}
       <div className="choices">
@@ -1354,8 +1367,8 @@ export default function App() {
     for (let i = 0; i < n; i++) {
       // 練習は**よく出るやつだけ**を繰り返す（反射で出るようにするため）。
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
-      // ステージ5のテストは、前半5問が手順テスト、後半5問が本番と同じ形
-      const steps = test && station === "S3" && i < 5;
+      // ステージ5の練習は、**最後の2問**を手順つきにする（盤で慣れてから、手順を自分で選ぶ）
+      const steps = !test && station === "S3" && i >= n - 2;
       let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
       for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
       seen.add(keyOf(q2));
@@ -1563,6 +1576,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 /* 済んだ処理。何をして何が出たかを残す */
+.scratch{width:100%;margin-top:10px;padding:10px 12px;border:1.5px dashed #30363d;border-radius:12px;
+  background:none;color:#e6edf3;font-size:15px;font-family:ui-monospace,Menlo,monospace;resize:vertical}
+.scratch::placeholder{color:#484f58}
 .donerow{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin-bottom:6px;
   border-left:3px solid #21262d;font-size:13px;color:#8b949e}
 .donerow b{color:#e6edf3;font-family:ui-monospace,Menlo,monospace}
@@ -1609,6 +1625,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .split{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
 .sp-c.blank{border-style:dashed;background:none}
+/* 「7乗」は3文字。マスからはみ出さないように小さく＋はみ出しを切る */
+.sp-c.pw{font-size:11px;min-width:0;overflow:hidden}
+.sp-row,.row8{min-width:0}
+.sp-row>*,.row8>*{min-width:0}
 .sp-c.done{color:#79c0ff}
 /* 線から左は、③の並びをそのまま持ってきたもの。同じ地の色で目をつなぐ */
 .sp-c.from{background:#132030;border-radius:7px}

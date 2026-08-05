@@ -22,9 +22,21 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
     const st = STATIONS.find((x) => x.id === "S3");
     const tile = $$(".tile").find((x) => x.textContent.includes(st.name));
     click(tile.querySelector(".t-h")); await wait(50);
-    click(tile.querySelectorAll(".go")[1]); await wait(150);   // テストへ
+    click(tile.querySelectorAll(".go")[0]); await wait(150);   // 練習へ
+    if ($(".sheet-p")) { click($$(".gotest button")[0]); await wait(150); }
+    // 手順つきは練習の最後の2問。そこまでは盤で解いて進む
+    const { cutOct, cutBit, maskStr } = require(path.join(R, "gen.js"));
+    for (let g = 0; g < 5 && w.__q && !w.__q.steps5; g++) {
+      const bq = w.__q, len = bq.board.len, oc = cutOct(len);
+      click($$("button.oct")[oc]); await wait(60);
+      const bulk = () => $$(".split.bulk .go");
+      click(bulk()[0]); await wait(60);
+      click(bulk()[1]); await wait(60);
+      click($$("button").find((b) => b.textContent.includes("これで決定"))); await wait(100);
+      click($$("button").find((b) => b.textContent.includes("次へ"))); await wait(120);
+    }
     const q = w.__q; n++;
-    if (!q.steps5) { ng++; console.log("1問目が手順テストになっていない"); continue; }
+    if (!q || !q.steps5) { ng++; console.log("練習の最後の2問が手順つきになっていない"); continue; }
     let bad = "";
     for (const round of q.steps5) {
       // 正解の手順を選ぶ
@@ -36,7 +48,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
       else {
         for (let i = 0; i < 8; i++) if (round.want & W8[i]) { click($$(".row8 button.cell")[i]); await wait(15); }
       }
-      click($$("button").find((b) => b.textContent.includes("できた"))); await wait(60);
+      click($$("button").find((b) => b.textContent.includes("次へ進む"))); await wait(60);
       if (round.kind === "fill") {
         // ぜんぶ 1 の番
         const cur = $$(".row8 button.cell");
@@ -45,7 +57,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
           const want = !!(round.want2 & W8[i]);
           if (on !== want) { click(cur[i]); await wait(15); }
         }
-        click($$("button").find((b) => b.textContent.includes("できた"))); await wait(60);
+        click($$("button").find((b) => b.textContent.includes("次へ進む"))); await wait(60);
       }
     }
     if (bad) { ng++; console.log(bad); continue; }
@@ -72,8 +84,18 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
     const st = STATIONS.find((x) => x.id === "S3");
     const tile = $$(".tile").find((x) => x.textContent.includes(st.name));
     click(tile.querySelector(".t-h")); await wait(50);
-    click(tile.querySelectorAll(".go")[1]); await wait(150);
+    click(tile.querySelectorAll(".go")[0]); await wait(150);
+    if ($(".sheet-p")) { click($$(".gotest button")[0]); await wait(150); }
+    const { cutOct } = require(path.join(R, "gen.js"));
+    for (let g = 0; g < 5 && w.__q && !w.__q.steps5; g++) {
+      click($$("button.oct")[cutOct(w.__q.board.len)]); await wait(60);
+      click($$(".split.bulk .go")[0]); await wait(60);
+      click($$(".split.bulk .go")[1]); await wait(60);
+      click($$("button").find((b) => b.textContent.includes("これで決定"))); await wait(100);
+      click($$("button").find((b) => b.textContent.includes("次へ"))); await wait(120);
+    }
     const q = w.__q;
+    if (!q || !q.steps5) { console.log("  ✗ 手順つきの問題までたどりつけない"); return; }
     // 1つ目の手順で、わざと外れを選ぶ → その場でミス判定になり、次の問題へ行けるはず
     const wrong = $$(".ch").find((c) => c.textContent.trim() !== q.steps5[0].ok);
     click(wrong); await wait(150);
@@ -91,14 +113,14 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
       click($$(".ch").find((c) => c.textContent.trim() === round.ok)); await wait(60);
       if (round.kind === "oct") { click($$("button.oct")[round.want]); await wait(40); }
       else for (let i = 0; i < 8; i++) if (round.want & W8[i]) { click($$(".row8 button.cell")[i]); await wait(15); }
-      click($$("button").find((b) => b.textContent.includes("できた"))); await wait(60);
+      click($$("button").find((b) => b.textContent.includes("次へ進む"))); await wait(60);
       if (round.kind === "fill") {
         const cur = $$(".row8 button.cell");
         for (let i = 0; i < 8; i++) {
           const on = cur[i].className.includes(" on"), want = !!(round.want2 & W8[i]);
           if (on !== want) { click(cur[i]); await wait(15); }
         }
-        click($$("button").find((b) => b.textContent.includes("できた"))); await wait(60);
+        click($$("button").find((b) => b.textContent.includes("次へ進む"))); await wait(60);
       }
     }
     click($$(".ch").find((c) => c.textContent.trim() === String(q.answer))); await wait(40);

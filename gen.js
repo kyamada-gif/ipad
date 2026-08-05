@@ -703,10 +703,16 @@ function makeQuestion(stationId, ease, test, goal, steps) {
   let q = g(ease);
   // 向きを指定されたら、その向きが出るまで作り直す（両向きを並べて見せるとき）
   for (let i = 0; goal && q.goal !== goal && i < 60; i++) q = g(ease);
+  // 手順つき（練習の中で使う）。最後は4択で締めるので、選択肢も作る
+  if (steps && stationId === "S3") {
+    q.steps5 = stepRounds(q.board.ip, q.board.len);
+    const w = wrongsOf(q).filter((x) => x && x !== q.answer);
+    const out = [String(q.answer)];
+    for (const x of shuffle(w)) { if (out.length >= 4) break; if (!out.includes(x)) out.push(x); }
+    q.choices = shuffle(out);
+  }
   if (test) {
     q.test = true;
-    // ステージ5の前半は「手順テスト」。後半は本番と同じ形（メモだけ）
-    if (steps && stationId === "S3") q.steps5 = stepRounds(q.board.ip, q.board.len);
     // プレフィックス長↔サブネットマスクは、自分で書く（選ぶと消去法で当たる）
     if (stationId === "S8") return q;
     const w = wrongsOf(q).filter((x) => x && x !== q.answer);
