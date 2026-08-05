@@ -127,7 +127,6 @@ function Play({ plan, onDone, onQuit }) {
   const [queue, setQueue] = useState(plan.queue);
   const [idx, setIdx] = useState(0);
   const [judged, setJudged] = useState(null);
-  const [slip, setSlip] = useState(false);
   const [val, setVal] = useState(null);      // 盤の状態。盤ごとに形がちがう
   const [results, setResults] = useState([]);
   // そのステージが初めてなら、最初に教材の見本を出す。読んだ直後に「これだ」とつながるように
@@ -155,20 +154,16 @@ function Play({ plan, onDone, onQuit }) {
     clearTimeout(timer.current);
     if (idx + 1 >= queue.length) { onDone(rs); return; }
     // 盤の中身も必ず消す。消し忘れると、前の答えが残ったまま次の問題が始まる
-    setIdx(idx + 1); setJudged(null); setSlip(false); setVal(null); startedAt.current = Date.now();
+    setIdx(idx + 1); setJudged(null); setVal(null); startedAt.current = Date.now();
   };
 
   /** 正解するまで次へ進まない。これは全体で1つの決まり。
       点になるのは**最初の答えだけ**（やり直しで全員が合格にならないように） */
-  const retry = () => { setJudged(null); setSlip(false); setVal(null); };
+  const retry = () => { setJudged(null); setVal(null); };
 
   const answer = (out) => {
     if (judged !== null) return;
-    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
-    const slipped = String(out).startsWith("__slip__:");
-    const real = slipped ? String(out).slice(9) : String(out);
-    const ok = !slipped && real === String(q.answer);
-    setSlip(slipped);   // 手順テストで、途中で外した
+    const ok = String(out) === String(q.answer);
     setJudged(ok); buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some((r) => r.idx === idx);
@@ -227,12 +222,8 @@ function Play({ plan, onDone, onQuit }) {
 
         {judged !== null && (
           <div className="verdict">
-            <div className={"dhead " + (judged ? "ok" : "ng")}>
-              {judged ? "✓ 正解" : slip ? "✕ とちゅうでまちがえました" : "✕ 不正解"}
-            </div>
-            {!judged && (slip
-              ? <div className="j-ans">点になるのは、ぜんぶ最初に合ったときだけです</div>
-              : <div className="j-ans">答えは <b>{String(q.answer)}</b></div>)}
+            <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
+            {!judged && <div className="j-ans">答えは <b>{String(q.answer)}</b></div>}
             {judged && q.tip && <div className="j-tip">💡 {q.tip}</div>}
             {/* 丸暗記させるステージでは、手順を出さない。答えだけでよい */}
             {judged === false && !q.memorize && (
@@ -272,11 +263,7 @@ function Tutorial({ station, goal, lead, onSolved }) {
   const again = () => { setVal(null); setJudged(null); };
   const answer = (out) => {
     if (judged !== null) return;
-    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
-    const slipped = String(out).startsWith("__slip__:");
-    const real = slipped ? String(out).slice(9) : String(out);
-    const ok = !slipped && real === String(q.answer);
-    setSlip(slipped);   // 手順テストで、途中で外した
+    const ok = String(out) === String(q.answer);
     setJudged(ok); buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
     // 押した直後に、判定が目に入るようにする（スクロールしないと見えないのを防ぐ）
@@ -1108,7 +1095,7 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
               </button>
             ))}
           </div>
-          <button className="next" onClick={() => onSubmit(st.slip ? "__slip__:" + st.pick : st.pick)}
+          <button className="next" onClick={() => onSubmit(st.pick)}
             disabled={locked || !st.pick}>これで決定</button>
         </div>
       );

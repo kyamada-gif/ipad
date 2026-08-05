@@ -167,7 +167,6 @@ function Play({
   const [queue, setQueue] = useState(plan.queue);
   const [idx, setIdx] = useState(0);
   const [judged, setJudged] = useState(null);
-  const [slip, setSlip] = useState(false);
   const [val, setVal] = useState(null); // 盤の状態。盤ごとに形がちがう
   const [results, setResults] = useState([]);
   // そのステージが初めてなら、最初に教材の見本を出す。読んだ直後に「これだ」とつながるように
@@ -205,7 +204,6 @@ function Play({
     // 盤の中身も必ず消す。消し忘れると、前の答えが残ったまま次の問題が始まる
     setIdx(idx + 1);
     setJudged(null);
-    setSlip(false);
     setVal(null);
     startedAt.current = Date.now();
   };
@@ -214,16 +212,11 @@ function Play({
       点になるのは**最初の答えだけ**（やり直しで全員が合格にならないように） */
   const retry = () => {
     setJudged(null);
-    setSlip(false);
     setVal(null);
   };
   const answer = out => {
     if (judged !== null) return;
-    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
-    const slipped = String(out).startsWith("__slip__:");
-    const real = slipped ? String(out).slice(9) : String(out);
-    const ok = !slipped && real === String(q.answer);
-    setSlip(slipped); // 手順テストで、途中で外した
+    const ok = String(out) === String(q.answer);
     setJudged(ok);
     buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
@@ -285,11 +278,9 @@ function Play({
     className: "verdict"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dhead " + (judged ? "ok" : "ng")
-  }, judged ? "✓ 正解" : slip ? "✕ とちゅうでまちがえました" : "✕ 不正解"), !judged && (slip ? /*#__PURE__*/React.createElement("div", {
+  }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement("div", {
     className: "j-ans"
-  }, "\u70B9\u306B\u306A\u308B\u306E\u306F\u3001\u305C\u3093\u3076\u6700\u521D\u306B\u5408\u3063\u305F\u3068\u304D\u3060\u3051\u3067\u3059") : /*#__PURE__*/React.createElement("div", {
-    className: "j-ans"
-  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer)))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
+  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
     className: "j-tip"
   }, "\uD83D\uDCA1 ", q.tip), judged === false && !q.memorize && /*#__PURE__*/React.createElement("div", {
     className: "why"
@@ -334,11 +325,7 @@ function Tutorial({
   };
   const answer = out => {
     if (judged !== null) return;
-    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
-    const slipped = String(out).startsWith("__slip__:");
-    const real = slipped ? String(out).slice(9) : String(out);
-    const ok = !slipped && real === String(q.answer);
-    setSlip(slipped); // 手順テストで、途中で外した
+    const ok = String(out) === String(q.answer);
     setJudged(ok);
     buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
@@ -1363,7 +1350,7 @@ function TestBoard({
         })
       }, /*#__PURE__*/React.createElement("span", null, c), locked && st.pick === c && c !== String(q.answer) && /*#__PURE__*/React.createElement("i", null, "\u3042\u306A\u305F\u306E\u56DE\u7B54")))), /*#__PURE__*/React.createElement("button", {
         className: "next",
-        onClick: () => onSubmit(st.slip ? "__slip__:" + st.pick : st.pick),
+        onClick: () => onSubmit(st.pick),
         disabled: locked || !st.pick
       }, "\u3053\u308C\u3067\u6C7A\u5B9A"));
     }

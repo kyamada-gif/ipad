@@ -70,7 +70,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
   }
   console.log(ng ? `✗ ${n}問中 ${ng}問 が通らない` : `✓ ${n}問すべて、手順どおり進めて正解になった`);
 
-  // 途中で1回外したら、最後に正解を選んでも ✕ になるか
+  // 途中で1回外しても、最後に正解を選べば ✓ になるか
   {
     const prog = {}; for (const s of STATIONS) prog[s.id] = { seen: 10, correct: 10, lit: true, solo: true };
     const d = new JSDOM(fs.readFileSync(path.join(R, "index.html"), "utf8"),
@@ -108,7 +108,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
       console.log(w.__q === before ? "  同じ問題のまま（そのフェーズだけやり直し）" : "  ✗ 問題が変わった");
       console.log($$(".ch").length === 4 && !$(".dhead") ? "  手順を選び直せる" : "  ✗ 選び直せない");
     }
-    // 選び直して最後まで進めると、途中で外したぶん ✕ になる
+    // 選び直して最後まで進めると、最後に正解を選んだので ○ になる
     for (const round of q.steps5) {
       click($$(".ch").find((c) => c.textContent.trim() === round.ok)); await wait(60);
       if (round.kind === "oct") { click($$("button.oct")[round.want]); await wait(40); }
@@ -126,6 +126,6 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
     click($$(".ch").find((c) => c.textContent.trim() === String(q.answer))); await wait(40);
     click($$("button").find((b) => b.textContent.includes("これで決定"))); await wait(150);
     const m2 = $(".dhead") ? $(".dhead").textContent : "";
-    console.log(m2.includes("とちゅう") ? "  最後まで進めても ✕ とちゅうでまちがえました" : `  ✗ 判定が違う（${m2}）`);
+    console.log($(".dhead.ok") ? "  途中で外しても、最後に正解を選べば ✓ 正解" : `  ✗ 判定が違う（${m2}）`);
   }
 })();
