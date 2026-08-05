@@ -1011,6 +1011,9 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
     const W = [128, 64, 32, 16, 8, 4, 2, 1];
     return (
       <div className="box">
+        {/* 先に電卓で引き算をして、その結果を下のマスに入れる。
+            道具（電卓）が上、答えを書くところが下。手を動かす順番と画面の順番をそろえる */}
+        <Calc value={st.calc} onChange={(c) => set({ calc: c })} />
         {/* 重みは書かない。どの桁がいくつかは、自分の頭から出す */}
         <div className="row8">
           {W.map((w) => (
@@ -1021,7 +1024,6 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
           ))}
         </div>
         <div className="out"><span className="o-n">いま <b>{W.map((w) => (bits & w ? 1 : 0)).join("")}</b></span></div>
-        <Calc value={st.calc} onChange={(c) => set({ calc: c })} />
         <button className="next" disabled={locked || !bits}
           onClick={() => onSubmit(W.map((w) => (bits & w ? 1 : 0)).join(""))}>これで決定</button>
       </div>

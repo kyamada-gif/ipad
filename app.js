@@ -1273,7 +1273,12 @@ function TestBoard({
     const W = [128, 64, 32, 16, 8, 4, 2, 1];
     return /*#__PURE__*/React.createElement("div", {
       className: "box"
-    }, /*#__PURE__*/React.createElement("div", {
+    }, /*#__PURE__*/React.createElement(Calc, {
+      value: st.calc,
+      onChange: c => set({
+        calc: c
+      })
+    }), /*#__PURE__*/React.createElement("div", {
       className: "row8"
     }, W.map(w => /*#__PURE__*/React.createElement("button", {
       key: w,
@@ -1287,12 +1292,7 @@ function TestBoard({
       className: "out"
     }, /*#__PURE__*/React.createElement("span", {
       className: "o-n"
-    }, "\u3044\u307E ", /*#__PURE__*/React.createElement("b", null, W.map(w => bits & w ? 1 : 0).join("")))), /*#__PURE__*/React.createElement(Calc, {
-      value: st.calc,
-      onChange: c => set({
-        calc: c
-      })
-    }), /*#__PURE__*/React.createElement("button", {
+    }, "\u3044\u307E ", /*#__PURE__*/React.createElement("b", null, W.map(w => bits & w ? 1 : 0).join("")))), /*#__PURE__*/React.createElement("button", {
       className: "next",
       disabled: locked || !bits,
       onClick: () => onSubmit(W.map(w => bits & w ? 1 : 0).join(""))
