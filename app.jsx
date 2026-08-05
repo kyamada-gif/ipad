@@ -23,6 +23,8 @@ const DRILL_N = 4;      // 練習：5問中4問で ● できた
 const CLEAR_N = 9;      // テスト：10問中9問で ★ バッジ
 /** その回の問題数と合格ライン。練習は5問中4問、テストは10問中9問。 */
 const sizeOf = (test) => (test ? TEST_QN : DRILL_QN);
+/** その問題の「材料」。同じものを1回の中で繰り返さないために使う。 */
+const keyOf = (q) => q.given.map((g) => g.v).join("|");
 /** その回の合格ライン。練習は8割、テストは9割。 */
 const needOf = (test) => (test ? CLEAR_N : DRILL_N);
 
@@ -994,7 +996,7 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
             </div>
           </>
         )}
-        <Calc plain value={st.calc} onChange={(c) => {
+        <Calc value={st.calc} onChange={(c) => {
           const t = c ? c.nums.reduce((a, n, i) => (i === 0 ? n : c.ops[i - 1] === "−" ? a - n : a + n), 0) : 0;
           if (!toMask) { set({ calc: c }); return; }
           const n2 = parts.slice(); n2[slot] = t; set({ calc: c, parts: n2 });
@@ -1119,10 +1121,15 @@ export default function App() {
     const first = !progress[station];         // そのステージが初めてか
     const queue = [];
     const n = sizeOf(test);
+    // 同じ材料が1回の中で繰り返し出ないようにする（/24 ばかり出ると練習にならない）
+    const seen = new Set();
     for (let i = 0; i < n; i++) {
       // 練習は**よく出るやつだけ**を繰り返す（反射で出るようにするため）。
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
-      queue.push({ q: makeQuestion(station, test ? i / (n - 1) : 0, test), scored: true });
+      let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test);
+      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test);
+      seen.add(keyOf(q2));
+      queue.push({ q: q2, scored: true });
     }
     setPlan({ station, test, first, queue });
     setRes(null); setRunId(runId + 1); setScreen("play");
