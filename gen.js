@@ -686,10 +686,12 @@ const EXAMPLES = {
  *  ease … 「5問の中の位置」（0 が最初、1 が最後）。前半はやさしい数にする
  *  test … 表なしの回。3〜7ステージは答えを打つのが重いので、選ぶ形にする
  *          （本番の CCNA も選択式。まちがいの選択肢はよくある間違いから作る） */
-function makeQuestion(stationId, ease, test) {
+function makeQuestion(stationId, ease, test, goal) {
   const g = GEN[stationId];
   if (!g) throw new Error("unknown station: " + stationId);
-  const q = g(ease);
+  let q = g(ease);
+  // 向きを指定されたら、その向きが出るまで作り直す（両向きを並べて見せるとき）
+  for (let i = 0; goal && q.goal !== goal && i < 60; i++) q = g(ease);
   if (test) {
     q.test = true;
     const w = wrongsOf(q).filter((x) => x && x !== q.answer);

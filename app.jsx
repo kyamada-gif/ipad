@@ -328,26 +328,18 @@ function Drill({ station, onDone, onHome }) {
 /* ── 説明の1枚 ────────────────────────
    ここだけは問題を出さない。**すべての土台なので、まず覚える時間**にする。
    見終わったら、その場から「テストをする」へ行ける。 */
-function Memo({ station, onDrill, onTest, onHome }) {
-  const st = byId(station);
-  // **文章で読ませず、手を動かして覚える。**教材の手順そのものを、盤で1段ずつたどる
-  const [q, setQ] = useState(() => makeQuestion(station, 0.6, false));
+/** チュートリアル1つぶん。**文章で読ませず、手を動かす。**教材の手順を盤で1段ずつたどる。 */
+function Tutorial({ station, goal, lead }) {
+  const [q, setQ] = useState(() => makeQuestion(station, 0.6, false, goal));
   const [val, setVal] = useState(null);
   const [judged, setJudged] = useState(null);
-  const again = () => { setQ(makeQuestion(station, 0.6, false)); setVal(null); setJudged(null); };
+  const again = () => { setQ(makeQuestion(station, 0.6, false, goal)); setVal(null); setJudged(null); };
   const answer = (out) => { if (judged === null) { const ok = String(out) === String(q.answer); setJudged(ok); buzz(ok ? 30 : 60); } };
   useEffect(() => { if (window.__debug) window.__q = q; }, [q]);
   const board = { q, value: val, onChange: setVal, locked: judged !== null, onSubmit: answer };
   return (
-    <div className="wrap sheet-p">
-      <div className="topbar"><button className="x" onClick={onHome}>✕</button></div>
-      <div className="mtitle">{st.no}　{st.name}</div>
-      {/* 前のステージで覚えた何を、ここでそのまま使うのか。必ず通る場所に1行だけ */}
-      {LINK[station] && <div className="link1">{LINK[station]}</div>}
-
-      {/* 言葉は1行だけ。あとは**そのステージで覚えるもの**を見て、そのまま覚える */}
-      <div className="how">{HOW[station]}</div>
-      {/* ここがチュートリアル。読むのではなく、1問を最後まで手で解く */}
+    <div className="tut">
+      {lead && <div className="tut-h">{lead}</div>}
       <div className="prompt">{q.prompt}</div>
       <div className="given">
         {q.given.map((g, i) => (
@@ -368,6 +360,31 @@ function Memo({ station, onDrill, onTest, onHome }) {
           {!judged && <div className="dwhy">答えは {String(q.answer)}</div>}
           <button className="next" onClick={again}>{judged ? "べつの数でもう一度" : "もう一度"}</button>
         </>
+      )}
+    </div>
+  );
+}
+
+function Memo({ station, onDrill, onTest, onHome }) {
+  const st = byId(station);
+  return (
+    <div className="wrap sheet-p">
+      <div className="topbar"><button className="x" onClick={onHome}>✕</button></div>
+      <div className="mtitle">{st.no}　{st.name}</div>
+      {/* 前のステージで覚えた何を、ここでそのまま使うのか。必ず通る場所に1行だけ */}
+      {LINK[station] && <div className="link1">{LINK[station]}</div>}
+
+      {/* 言葉は1行だけ。あとは**そのステージで覚えるもの**を見て、そのまま覚える */}
+      <div className="how">{HOW[station]}</div>
+      {/* ここがチュートリアル。読むのではなく、1問を最後まで手で解く。
+          向きが2つあるステージは、**両方を並べて**見せる */}
+      {station === "S8" ? (
+        <>
+          <Tutorial station={station} goal="toMask" lead="① プレフィックス長 → サブネットマスク" />
+          <Tutorial station={station} goal="toLen" lead="② サブネットマスク → プレフィックス長" />
+        </>
+      ) : (
+        <Tutorial station={station} />
       )}
 
       {CARDS[station] && (
@@ -575,7 +592,9 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
 
       {full < 4 && (
         <>
-          <div className="lead">② 残り{rest != null && rest > 0 ? <> <b>{rest} 個</b></> : null}を 1 にする</div>
+          <div className="lead">
+            ② のこり{rest != null && rest > 0 ? <> <b>{rest} 個</b></> : null}の <b>1</b> を、左から順に置く
+          </div>
           <div className="split">
             <div className="sp-lab" />
             <div className="sp-row">
@@ -1230,6 +1249,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dopt.right{border-color:#2ea043;background:#0f2a16;color:#56d364}
 .dopt.ng{border-color:#f85149;color:#ff7b72}
 .dopt i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72}
+.tut{border-top:1px solid #21262d;padding-top:14px;margin-top:14px}
+.tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}

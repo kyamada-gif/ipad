@@ -402,19 +402,17 @@ function Drill({
 /* ── 説明の1枚 ────────────────────────
    ここだけは問題を出さない。**すべての土台なので、まず覚える時間**にする。
    見終わったら、その場から「テストをする」へ行ける。 */
-function Memo({
+/** チュートリアル1つぶん。**文章で読ませず、手を動かす。**教材の手順を盤で1段ずつたどる。 */
+function Tutorial({
   station,
-  onDrill,
-  onTest,
-  onHome
+  goal,
+  lead
 }) {
-  const st = byId(station);
-  // **文章で読ませず、手を動かして覚える。**教材の手順そのものを、盤で1段ずつたどる
-  const [q, setQ] = useState(() => makeQuestion(station, 0.6, false));
+  const [q, setQ] = useState(() => makeQuestion(station, 0.6, false, goal));
   const [val, setVal] = useState(null);
   const [judged, setJudged] = useState(null);
   const again = () => {
-    setQ(makeQuestion(station, 0.6, false));
+    setQ(makeQuestion(station, 0.6, false, goal));
     setVal(null);
     setJudged(null);
   };
@@ -436,19 +434,10 @@ function Memo({
     onSubmit: answer
   };
   return /*#__PURE__*/React.createElement("div", {
-    className: "wrap sheet-p"
-  }, /*#__PURE__*/React.createElement("div", {
-    className: "topbar"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "x",
-    onClick: onHome
-  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
-    className: "mtitle"
-  }, st.no, "\u3000", st.name), LINK[station] && /*#__PURE__*/React.createElement("div", {
-    className: "link1"
-  }, LINK[station]), /*#__PURE__*/React.createElement("div", {
-    className: "how"
-  }, HOW[station]), /*#__PURE__*/React.createElement("div", {
+    className: "tut"
+  }, lead && /*#__PURE__*/React.createElement("div", {
+    className: "tut-h"
+  }, lead), /*#__PURE__*/React.createElement("div", {
     className: "prompt"
   }, q.prompt), /*#__PURE__*/React.createElement("div", {
     className: "given"
@@ -466,7 +455,39 @@ function Memo({
   }, "\u7B54\u3048\u306F ", String(q.answer)), /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: again
-  }, judged ? "べつの数でもう一度" : "もう一度")), CARDS[station] && /*#__PURE__*/React.createElement("div", {
+  }, judged ? "べつの数でもう一度" : "もう一度")));
+}
+function Memo({
+  station,
+  onDrill,
+  onTest,
+  onHome
+}) {
+  const st = byId(station);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "wrap sheet-p"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "topbar"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "x",
+    onClick: onHome
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    className: "mtitle"
+  }, st.no, "\u3000", st.name), LINK[station] && /*#__PURE__*/React.createElement("div", {
+    className: "link1"
+  }, LINK[station]), /*#__PURE__*/React.createElement("div", {
+    className: "how"
+  }, HOW[station]), station === "S8" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Tutorial, {
+    station: station,
+    goal: "toMask",
+    lead: "\u2460 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577 \u2192 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF"
+  }), /*#__PURE__*/React.createElement(Tutorial, {
+    station: station,
+    goal: "toLen",
+    lead: "\u2461 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF \u2192 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577"
+  })) : /*#__PURE__*/React.createElement(Tutorial, {
+    station: station
+  }), CARDS[station] && /*#__PURE__*/React.createElement("div", {
     className: "dtable"
   }, CARDS[station].map((c, j) => /*#__PURE__*/React.createElement("div", {
     key: j,
@@ -729,7 +750,7 @@ function MaskBoard({
     className: "tick"
   }, t)))), full < 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "lead"
-  }, "\u2461 \u6B8B\u308A", rest != null && rest > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, " ", /*#__PURE__*/React.createElement("b", null, rest, " \u500B")) : null, "\u3092 1 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2461 \u306E\u3053\u308A", rest != null && rest > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, " ", /*#__PURE__*/React.createElement("b", null, rest, " \u500B")) : null, "\u306E ", /*#__PURE__*/React.createElement("b", null, "1"), " \u3092\u3001\u5DE6\u304B\u3089\u9806\u306B\u7F6E\u304F"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
@@ -1576,6 +1597,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dopt.right{border-color:#2ea043;background:#0f2a16;color:#56d364}
 .dopt.ng{border-color:#f85149;color:#ff7b72}
 .dopt i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72}
+.tut{border-top:1px solid #21262d;padding-top:14px;margin-top:14px}
+.tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
