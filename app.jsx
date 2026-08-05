@@ -975,10 +975,22 @@ function Result({ res, plan, onHome, onAgain, onTest }) {
       {newly && NEXT[plan.station] && <div className="rnext">{NEXT[plan.station]}</div>}
       {/* 練習ができた直後は、そのままテストに行けるようにする。
           ホームに戻って切り替えを押し直させると、その一手間で足が止まる */}
-      <button className="next" onClick={cleared ? onHome : onAgain}>{cleared ? "つづける" : "もう一度"}</button>
-      <button className="mini" onClick={cleared ? onAgain : onHome}>
-        {cleared ? "同じステージをもう一度" : "ホームへ"}
-      </button>
+      {/* 練習のあとは、そのままテストへ行けるようにする。どのステージでも同じ。
+          ホームに戻って札を開き直させると、その一手間で足が止まる */}
+      {!plan.test ? (
+        <>
+          <button className="next" onClick={onTest}>テストをする</button>
+          <button className="mini" onClick={onAgain}>もう一度 練習する</button>
+          <button className="mini" onClick={onHome}>ホームへ</button>
+        </>
+      ) : (
+        <>
+          <button className="next" onClick={cleared ? onHome : onAgain}>{cleared ? "つづける" : "もう一度"}</button>
+          <button className="mini" onClick={cleared ? onAgain : onHome}>
+            {cleared ? "同じステージをもう一度" : "ホームへ"}
+          </button>
+        </>
+      )}
     </div>
   );
 }

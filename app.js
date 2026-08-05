@@ -1237,13 +1237,22 @@ function Result({
     className: "rmsg"
   }, msg), newly && NEXT[plan.station] && /*#__PURE__*/React.createElement("div", {
     className: "rnext"
-  }, NEXT[plan.station]), /*#__PURE__*/React.createElement("button", {
+  }, NEXT[plan.station]), !plan.test ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
+    className: "next",
+    onClick: onTest
+  }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
+    className: "mini",
+    onClick: onAgain
+  }, "\u3082\u3046\u4E00\u5EA6 \u7DF4\u7FD2\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
+    className: "mini",
+    onClick: onHome
+  }, "\u30DB\u30FC\u30E0\u3078")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("button", {
     className: "next",
     onClick: cleared ? onHome : onAgain
   }, cleared ? "つづける" : "もう一度"), /*#__PURE__*/React.createElement("button", {
     className: "mini",
     onClick: cleared ? onAgain : onHome
-  }, cleared ? "同じステージをもう一度" : "ホームへ"));
+  }, cleared ? "同じステージをもう一度" : "ホームへ")));
 }
 
 /* =========================================================================
