@@ -17,9 +17,12 @@ import React, { useState, useEffect, useRef, useMemo } from "react";
  *   押すボタンはホームに「つづける」1つ。何をやるかはアプリが決める。
  */
 
-const SESSION_N = 5;    // 1回の問題数（練習もテストも）
+const DRILL_QN = 5;     // 練習は5問（手を動かして慣れる場）
+const TEST_QN = 10;     // テストは10問（本番と同じ形で測る場）
 const DRILL_N = 4;      // 練習：5問中4問で ● できた
-const CLEAR_N = 5;      // テスト：5問ぜんぶで ★ バッジ
+const CLEAR_N = 9;      // テスト：10問中9問で ★ バッジ
+/** その回の問題数と合格ライン。練習は5問中4問、テストは10問中9問。 */
+const sizeOf = (test) => (test ? TEST_QN : DRILL_QN);
 /** その回の合格ライン。練習は8割、テストは9割。 */
 const needOf = (test) => (test ? CLEAR_N : DRILL_N);
 
@@ -1023,10 +1026,11 @@ export default function App() {
     }
     const first = !progress[station];         // そのステージが初めてか
     const queue = [];
-    for (let i = 0; i < SESSION_N; i++) {
+    const n = sizeOf(test);
+    for (let i = 0; i < n; i++) {
       // 練習は**よく出るやつだけ**を繰り返す（反射で出るようにするため）。
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
-      queue.push({ q: makeQuestion(station, test ? i / (SESSION_N - 1) : 0, test), scored: true });
+      queue.push({ q: makeQuestion(station, test ? i / (n - 1) : 0, test), scored: true });
     }
     setPlan({ station, test, first, queue });
     setRes(null); setRunId(runId + 1); setScreen("play");
