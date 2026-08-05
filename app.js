@@ -111,7 +111,7 @@ function Home({
     }
   })), /*#__PURE__*/React.createElement("div", {
     className: "hero-n"
-  }, "\u30D0\u30C3\u30B8 ", doneT, " / ", STATIONS.length)), /*#__PURE__*/React.createElement("div", {
+  }, "\uD83C\uDFC5 ", doneT, " / ", STATIONS.length)), /*#__PURE__*/React.createElement("div", {
     className: "road"
   }, STATIONS.map((s, i) => {
     const solo = isSolo(progress, s.id),
@@ -134,7 +134,7 @@ function Home({
       }
     }, /*#__PURE__*/React.createElement("span", {
       className: "lamp"
-    }, open ? solo ? "★" : lit ? "●" : "○" : "🔒"), /*#__PURE__*/React.createElement("span", {
+    }, open ? solo ? "🏅" : lit ? "●" : "○" : "🔒"), /*#__PURE__*/React.createElement("span", {
       className: "t-b"
     }, /*#__PURE__*/React.createElement("span", {
       className: "t-name"
@@ -155,7 +155,7 @@ function Home({
     }, "\u5148\u306B\u7DF4\u7FD2\u3067\u3067\u304D\u308B\u3068\u3001\u30C6\u30B9\u30C8\u304C\u958B\u304D\u307E\u3059"));
   })), /*#__PURE__*/React.createElement("div", {
     className: "foot"
-  }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u3092\u898B\u305F\u3000\u3000\u2605 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
+  }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u304C\u3067\u304D\u305F\u3000\u3000\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
     className: "unlock" + (unlock ? " on" : ""),
     onClick: () => onUnlock(!unlock)
   }, unlock ? "鍵をかけ直す" : "ぜんぶ開く（お試し）"));
@@ -1236,7 +1236,9 @@ function Result({
     className: "rtitle"
   }, st.no, "\u3000", st.name), /*#__PURE__*/React.createElement("div", {
     className: "rscore" + (cleared ? " ok" : "")
-  }, correct, /*#__PURE__*/React.createElement("span", null, "/", total)), /*#__PURE__*/React.createElement("div", {
+  }, correct, /*#__PURE__*/React.createElement("span", null, "/", total)), plan.test && cleared && /*#__PURE__*/React.createElement("div", {
+    className: "rbadge"
+  }, "\uD83C\uDFC5"), /*#__PURE__*/React.createElement("div", {
     className: "rmsg"
   }, msg), newly && NEXT[plan.station] && /*#__PURE__*/React.createElement("div", {
     className: "rnext"
@@ -1574,6 +1576,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dopt.right{border-color:#2ea043;background:#0f2a16;color:#56d364}
 .dopt.ng{border-color:#f85149;color:#ff7b72}
 .dopt i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72}
+.rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
 .dhead.ng{color:#ff7b72}

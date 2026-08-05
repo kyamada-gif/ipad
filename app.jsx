@@ -64,7 +64,7 @@ function Home({ progress, unlock, onUnlock, onStart }) {
       <header className="hero">
         <div className="hero-t">IPアドレスの計算</div>
         <div className="bar"><div className="bar-in" style={{ width: (doneT / STATIONS.length) * 100 + "%" }} /></div>
-        <div className="hero-n">バッジ {doneT} / {STATIONS.length}</div>
+        <div className="hero-n">🏅 {doneT} / {STATIONS.length}</div>
       </header>
 
       <div className="road">
@@ -82,7 +82,7 @@ function Home({ progress, unlock, onUnlock, onStart }) {
               <div className={"tile" + (open ? "" : " locked") + (lit ? " lit" : "") + (solo ? " solo" : "")
                 + (pick === s.id ? " pick" : "")}>
                 <button className="t-h" onClick={() => { setPick(pick === s.id ? null : s.id); setBlocked(null); }}>
-                  <span className="lamp">{open ? (solo ? "★" : lit ? "●" : "○") : "🔒"}</span>
+                  <span className="lamp">{open ? (solo ? "🏅" : lit ? "●" : "○") : "🔒"}</span>
                   <span className="t-b">
                     <span className="t-name">{s.no}　{s.name}</span>
                     <span className="t-ex">{s.ex}</span>
@@ -109,7 +109,7 @@ function Home({ progress, unlock, onUnlock, onStart }) {
         })}
       </div>
 
-      <div className="foot">○ まだ　　● 練習を見た　　★ バッジ（テストで9割）</div>
+      <div className="foot">○ まだ　　● 練習ができた　　🏅 バッジ（テストで9割）</div>
       {/* お試し。鍵を外しても、できたかどうかの記録はそのまま */}
       <button className={"unlock" + (unlock ? " on" : "")} onClick={() => onUnlock(!unlock)}>
         {unlock ? "鍵をかけ直す" : "ぜんぶ開く（お試し）"}
@@ -973,6 +973,8 @@ function Result({ res, plan, onHome, onAgain, onTest }) {
     <div className={"wrap result" + (newly ? " flash" : "")}>
       <div className="rtitle">{st.no}　{st.name}</div>
       <div className={"rscore" + (cleared ? " ok" : "")}>{correct}<span>/{total}</span></div>
+      {/* テストに合格したら、大きく1つ。祝うのはここだけ（毎問は祝わない） */}
+      {plan.test && cleared && <div className="rbadge">🏅</div>}
       <div className="rmsg">{msg}</div>
       {/* はじめてできたときだけ。毎回出すと読まれなくなる */}
       {newly && NEXT[plan.station] && <div className="rnext">{NEXT[plan.station]}</div>}
@@ -1228,6 +1230,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dopt.right{border-color:#2ea043;background:#0f2a16;color:#56d364}
 .dopt.ng{border-color:#f85149;color:#ff7b72}
 .dopt i{font-style:normal;font-size:11px;font-weight:400;color:#ff7b72}
+.rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
 .dhead.ng{color:#ff7b72}
