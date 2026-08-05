@@ -340,12 +340,18 @@ function Drill({ station, onDone, onHome }) {
    ここだけは問題を出さない。**すべての土台なので、まず覚える時間**にする。
    見終わったら、その場から「テストをする」へ行ける。 */
 /** チュートリアル1つぶん。**文章で読ませず、手を動かす。**教材の手順を盤で1段ずつたどる。 */
-function Tutorial({ station, goal, lead }) {
-  const [q, setQ] = useState(() => makeQuestion(station, 0.6, false, goal));
+function Tutorial({ station, goal, lead, onSolved }) {
+  const [q] = useState(() => makeQuestion(station, 0.6, false, goal));
   const [val, setVal] = useState(null);
   const [judged, setJudged] = useState(null);
-  const again = () => { setQ(makeQuestion(station, 0.6, false, goal)); setVal(null); setJudged(null); };
-  const answer = (out) => { if (judged === null) { const ok = String(out) === String(q.answer); setJudged(ok); buzz(ok ? 30 : 60); } };
+  // 正解するまで、同じ問題をやり直す（全体で1つの決まり）
+  const again = () => { setVal(null); setJudged(null); };
+  const answer = (out) => {
+    if (judged !== null) return;
+    const ok = String(out) === String(q.answer);
+    setJudged(ok); buzz(ok ? 30 : 60);
+    if (ok && onSolved) onSolved();
+  };
   useEffect(() => { if (window.__debug) window.__q = q; }, [q]);
   const board = { q, value: val, onChange: setVal, locked: judged !== null, onSubmit: answer };
   return (
@@ -367,13 +373,17 @@ function Tutorial({ station, goal, lead }) {
         : q.input === "pick" ? <PickBoard {...board} />
         : q.input === "wild" ? <WildBoard {...board} />
         : <StackBoard {...board} />}
+      {/* チュートリアルは1問だけ。正解したら、次にやることは下の「練習をする」だけ。
+          くり返させると、どこで終わりなのか分からなくなる */}
       {judged !== null && (
         <>
           <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
-          {!judged && <div className="dwhy">答えは {String(q.answer)}</div>}
-          <button className={"next " + (judged ? "calm" : "retry")} onClick={again}>
-            {judged ? "べつの数で もう一度 →" : "🔁 もう一度"}
-          </button>
+          {!judged && (
+            <>
+              <div className="dwhy">答えは {String(q.answer)}</div>
+              <button className="next retry" onClick={again}>🔁 もう一度</button>
+            </>
+          )}
         </>
       )}
     </div>
@@ -382,6 +392,10 @@ function Tutorial({ station, goal, lead }) {
 
 function Memo({ station, onDrill, onTest, onHome }) {
   const st = byId(station);
+  // チュートリアルが解けたら、次にやること（練習をする）を目立たせる
+  const [solved, setSolved] = useState(false);
+  const [solved2, setSolved2] = useState(false);
+  const both = station === "S8" ? (solved && solved2) : solved;
   return (
     <div className="wrap sheet-p">
       <div className="topbar"><button className="x" onClick={onHome}>✕</button></div>
@@ -395,35 +409,20 @@ function Memo({ station, onDrill, onTest, onHome }) {
           向きが2つあるステージは、**両方を並べて**見せる */}
       {station === "S8" ? (
         <>
-          <Tutorial station={station} goal="toMask" lead="① プレフィックス長 → サブネットマスク" />
-          <Tutorial station={station} goal="toLen" lead="② サブネットマスク → プレフィックス長" />
+          <Tutorial station={station} goal="toMask" lead="① プレフィックス長 → サブネットマスク"
+            onSolved={() => setSolved(true)} />
+          <Tutorial station={station} goal="toLen" lead="② サブネットマスク → プレフィックス長"
+            onSolved={() => setSolved2(true)} />
         </>
       ) : (
-        <Tutorial station={station} />
-      )}
-
-      {CARDS[station] && (
-        <div className="dtable">
-          {CARDS[station].map((c, j) => (
-            <div key={j} className="dtr"><span>{c.q}</span><b>{c.a}</b></div>
-          ))}
-        </div>
-      )}
-      {EXLINE[station] && <div className="exline">{EXLINE[station]}</div>}
-      {/* 覚える表が無いステージは、解いた跡を1つ見せる（文章を足さずに、例で見せる） */}
-      {!CARDS[station] && EXAMPLES[station] && (
-        <div className="dtable">
-          {EXAMPLES[station].rows.map((r, j) => (
-            <div key={j} className="dtr"><span>{r[0]}</span><b>{r[1]}</b></div>
-          ))}
-        </div>
+        <Tutorial station={station} onSolved={() => setSolved(true)} />
       )}
 
       {/* 入口は、いつも画面のいちばん下に貼り付いている。
           練習＝よく出るやつを反射で覚える／テスト＝本番と同じ形で演習 */}
       {/* 覚える表があるステージだけ「覚える」を出す。無いステージに中間の段を作らない */}
       <div className="gotest two">
-        <button className="next" onClick={onDrill}>練習をする</button>
+        <button className={"next" + (both ? "" : " calm")} onClick={onDrill}>練習をする</button>
         <button className="next ghost" onClick={onTest}>テストをする</button>
       </div>
     </div>
@@ -1328,12 +1327,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .drill{padding-bottom:40px}
 .link1{font-size:13px;color:#8b949e;line-height:1.7;padding:10px 12px;margin-bottom:12px;
   border-left:3px solid #30363d;background:#161b22;border-radius:0 8px 8px 0}
-.exline{font-size:13px;color:#8b949e;line-height:1.7;margin:12px 0 4px}
 .rnext{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 4px;text-align:left}
-.dtable{margin:16px 0 8px}
-.dtr{display:flex;justify-content:space-between;gap:12px;padding:9px 4px;font-size:15px;
-  font-family:ui-monospace,Menlo,monospace;color:#8b949e;border-bottom:1px solid #21262d}
-.dtr b{color:#e6edf3}
 .dwhy{text-align:center;font-size:13px;color:#8b949e;margin:8px 0 16px;
   font-family:ui-monospace,Menlo,monospace}
 .dcard{font-size:34px;font-weight:800;text-align:center;padding:22px 8px;margin:16px 0;

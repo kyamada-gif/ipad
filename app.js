@@ -410,22 +410,23 @@ function Drill({
 function Tutorial({
   station,
   goal,
-  lead
+  lead,
+  onSolved
 }) {
-  const [q, setQ] = useState(() => makeQuestion(station, 0.6, false, goal));
+  const [q] = useState(() => makeQuestion(station, 0.6, false, goal));
   const [val, setVal] = useState(null);
   const [judged, setJudged] = useState(null);
+  // 正解するまで、同じ問題をやり直す（全体で1つの決まり）
   const again = () => {
-    setQ(makeQuestion(station, 0.6, false, goal));
     setVal(null);
     setJudged(null);
   };
   const answer = out => {
-    if (judged === null) {
-      const ok = String(out) === String(q.answer);
-      setJudged(ok);
-      buzz(ok ? 30 : 60);
-    }
+    if (judged !== null) return;
+    const ok = String(out) === String(q.answer);
+    setJudged(ok);
+    buzz(ok ? 30 : 60);
+    if (ok && onSolved) onSolved();
   };
   useEffect(() => {
     if (window.__debug) window.__q = q;
@@ -456,12 +457,12 @@ function Tutorial({
     className: "gv"
   }, g.v)))), q.input === "pow" ? /*#__PURE__*/React.createElement(PowBoard, board) : q.input === "mask" ? /*#__PURE__*/React.createElement(MaskBoard, board) : q.input === "sum" ? /*#__PURE__*/React.createElement(SumBoard, board) : q.input === "sub" ? /*#__PURE__*/React.createElement(SubBoard, board) : q.input === "split" ? /*#__PURE__*/React.createElement(SplitBoard, board) : q.input === "pick" ? /*#__PURE__*/React.createElement(PickBoard, board) : q.input === "wild" ? /*#__PURE__*/React.createElement(WildBoard, board) : /*#__PURE__*/React.createElement(StackBoard, board), judged !== null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "dhead " + (judged ? "ok" : "ng")
-  }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement("div", {
+  }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "dwhy"
   }, "\u7B54\u3048\u306F ", String(q.answer)), /*#__PURE__*/React.createElement("button", {
-    className: "next " + (judged ? "calm" : "retry"),
+    className: "next retry",
     onClick: again
-  }, judged ? "べつの数で もう一度 →" : "🔁 もう一度")));
+  }, "\uD83D\uDD01 \u3082\u3046\u4E00\u5EA6"))));
 }
 function Memo({
   station,
@@ -470,6 +471,10 @@ function Memo({
   onHome
 }) {
   const st = byId(station);
+  // チュートリアルが解けたら、次にやること（練習をする）を目立たせる
+  const [solved, setSolved] = useState(false);
+  const [solved2, setSolved2] = useState(false);
+  const both = station === "S8" ? solved && solved2 : solved;
   return /*#__PURE__*/React.createElement("div", {
     className: "wrap sheet-p"
   }, /*#__PURE__*/React.createElement("div", {
@@ -486,29 +491,20 @@ function Memo({
   }, HOW[station]), station === "S8" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Tutorial, {
     station: station,
     goal: "toMask",
-    lead: "\u2460 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577 \u2192 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF"
+    lead: "\u2460 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577 \u2192 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF",
+    onSolved: () => setSolved(true)
   }), /*#__PURE__*/React.createElement(Tutorial, {
     station: station,
     goal: "toLen",
-    lead: "\u2461 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF \u2192 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577"
+    lead: "\u2461 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF \u2192 \u30D7\u30EC\u30D5\u30A3\u30C3\u30AF\u30B9\u9577",
+    onSolved: () => setSolved2(true)
   })) : /*#__PURE__*/React.createElement(Tutorial, {
-    station: station
-  }), CARDS[station] && /*#__PURE__*/React.createElement("div", {
-    className: "dtable"
-  }, CARDS[station].map((c, j) => /*#__PURE__*/React.createElement("div", {
-    key: j,
-    className: "dtr"
-  }, /*#__PURE__*/React.createElement("span", null, c.q), /*#__PURE__*/React.createElement("b", null, c.a)))), EXLINE[station] && /*#__PURE__*/React.createElement("div", {
-    className: "exline"
-  }, EXLINE[station]), !CARDS[station] && EXAMPLES[station] && /*#__PURE__*/React.createElement("div", {
-    className: "dtable"
-  }, EXAMPLES[station].rows.map((r, j) => /*#__PURE__*/React.createElement("div", {
-    key: j,
-    className: "dtr"
-  }, /*#__PURE__*/React.createElement("span", null, r[0]), /*#__PURE__*/React.createElement("b", null, r[1])))), /*#__PURE__*/React.createElement("div", {
+    station: station,
+    onSolved: () => setSolved(true)
+  }), /*#__PURE__*/React.createElement("div", {
     className: "gotest two"
   }, /*#__PURE__*/React.createElement("button", {
-    className: "next",
+    className: "next" + (both ? "" : " calm"),
     onClick: onDrill
   }, "\u7DF4\u7FD2\u3092\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
     className: "next ghost",
@@ -1682,12 +1678,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .drill{padding-bottom:40px}
 .link1{font-size:13px;color:#8b949e;line-height:1.7;padding:10px 12px;margin-bottom:12px;
   border-left:3px solid #30363d;background:#161b22;border-radius:0 8px 8px 0}
-.exline{font-size:13px;color:#8b949e;line-height:1.7;margin:12px 0 4px}
 .rnext{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 4px;text-align:left}
-.dtable{margin:16px 0 8px}
-.dtr{display:flex;justify-content:space-between;gap:12px;padding:9px 4px;font-size:15px;
-  font-family:ui-monospace,Menlo,monospace;color:#8b949e;border-bottom:1px solid #21262d}
-.dtr b{color:#e6edf3}
 .dwhy{text-align:center;font-size:13px;color:#8b949e;margin:8px 0 16px;
   font-family:ui-monospace,Menlo,monospace}
 .dcard{font-size:34px;font-weight:800;text-align:center;padding:22px 8px;margin:16px 0;
