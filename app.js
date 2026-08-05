@@ -442,6 +442,8 @@ function Tutorial({
   }, lead && /*#__PURE__*/React.createElement("div", {
     className: "tut-h"
   }, lead), /*#__PURE__*/React.createElement("div", {
+    className: "testnote"
+  }, "\u307E\u305A\u306F1\u554F\u3001\u624B\u3092\u52D5\u304B\u3057\u3066\u3084\u3063\u3066\u307F\u307E\u3059\uFF08\u63A1\u70B9\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "prompt"
   }, q.prompt), /*#__PURE__*/React.createElement("div", {
     className: "given"
@@ -556,7 +558,7 @@ function WildBoard({
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (done ? "past" : "now")
   }, "\u2460 ", /*#__PURE__*/React.createElement("b", null, "255 \u304B\u3089\u5F15\u304F"), "\u3002\u5DE6\u304B\u3089\u9806\u306B"), m.map((v, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "split"
@@ -764,7 +766,7 @@ function MaskBoard({
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (full ? "past" : "now")
   }, "\u2460 ", /*#__PURE__*/React.createElement("b", null, "8 \u305A\u3064"), " \u533A\u5207\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "dots"
   }, /*#__PURE__*/React.createElement("span", {
@@ -790,7 +792,7 @@ function MaskBoard({
   }, " "), /*#__PURE__*/React.createElement("span", {
     className: "tick"
   }, t)))), full < 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (bits ? "past" : "now")
   }, "\u2461 \u306E\u3053\u308A", rest != null && rest > 0 ? /*#__PURE__*/React.createElement(React.Fragment, null, " ", /*#__PURE__*/React.createElement("b", null, rest, " \u500B")) : null, "\u306E ", /*#__PURE__*/React.createElement("b", null, "1"), " \u3092\u3001\u5DE6\u304B\u3089\u9806\u306B\u7F6E\u304F"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
@@ -875,7 +877,7 @@ function SplitBoard({
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (oct != null ? "past" : "now")
   }, "\u2460 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u3092\u5DE6\u304B\u3089\u898B\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "255 \u3067\u306A\u3044\u6570"), "\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "dots"
   }, /*#__PURE__*/React.createElement("span", {
@@ -905,7 +907,7 @@ function SplitBoard({
   }, "."), /*#__PURE__*/React.createElement("span", {
     className: "num" + (oct === i ? " on" : "")
   }, v)))), /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (cut > 0 ? "past" : "now")
   }, "\u2461 ", /*#__PURE__*/React.createElement("b", null, mask[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
@@ -935,7 +937,7 @@ function SplitBoard({
     key: w,
     className: "sp-w"
   }, w)))), cut > 0 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (ready ? "past" : "now")
   }, "\u2462 IP\u30A2\u30C9\u30EC\u30B9\u306E ", /*#__PURE__*/React.createElement("b", null, "\u7DDA\u304B\u3089\u53F3"), "\u3092\u3001\u305C\u3093\u3076 0 \u3068 \u305C\u3093\u3076 1 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
@@ -1012,7 +1014,7 @@ function PickBoard({
   }, q.goal === "host" && /*#__PURE__*/React.createElement("div", {
     className: "lead"
   }, "\u30CD\u30C3\u30C8\u30EF\u30FC\u30AF\u30A2\u30C9\u30EC\u30B9\u3068\u30D6\u30ED\u30FC\u30C9\u30AD\u30E3\u30B9\u30C8\u30A2\u30C9\u30EC\u30B9\u306E\u3076\u3093\u3067 \uFF0B2\u3000", /*#__PURE__*/React.createElement("b", null, q.need, " + 2 = ", q.want)), /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (w != null ? "past" : "now")
   }, /*#__PURE__*/React.createElement("b", null, q.want), " \u304C\u5165\u308B\u3001\u3044\u3061\u3070\u3093\u5C0F\u3055\u3044\u3068\u3053\u308D\u3092\u62BC\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "point"
   }, q.goal === "host" ? "下の段は、いつもの 128〜1 の表（アドレスの4つ目）。上の段は、そのひとつ左" : "数が大きいほど、たくさん分けられる"), /*#__PURE__*/React.createElement("div", {
@@ -1070,7 +1072,7 @@ function StackBoard({
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (oc != null ? "past" : "now")
   }, "\u2460 4\u3064\u3092\u898B\u304F\u3089\u3079\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "\u9055\u3063\u3066\u3044\u308B\u3068\u3053\u308D"), "\u3092\u62BC\u3059"), parts.map((ps, r) => /*#__PURE__*/React.createElement("div", {
     key: r,
     className: "dots"
@@ -1089,7 +1091,7 @@ function StackBoard({
   }, v) : /*#__PURE__*/React.createElement("span", {
     className: "num" + (oc === i ? " on" : "")
   }, v))))), oc != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "lead"
+    className: "lead " + (cut != null ? "past" : "now")
   }, "\u2461 \u7E26\u306B\u898B\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "4\u3064\u3068\u3082\u540C\u3058"), "\u3068\u3053\u308D\u307E\u3067\u62BC\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "stack"
   }, parts.map((ps, r) => /*#__PURE__*/React.createElement("div", {
@@ -1233,7 +1235,7 @@ function TestBoard({
     return /*#__PURE__*/React.createElement("div", {
       className: "box"
     }, /*#__PURE__*/React.createElement(WeightTable, null), toMask && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-      className: "lead"
+      className: "lead now"
     }, "\u6253\u3061\u3053\u3080\u3068\u3053\u308D\u3092\u62BC\u3057\u3066\u304B\u3089\u3001\u6570\u5B57\u3092\u5165\u308C\u308B"), /*#__PURE__*/React.createElement("div", {
       className: "dots"
     }, parts.map((x, i) => /*#__PURE__*/React.createElement(React.Fragment, {
@@ -1241,12 +1243,12 @@ function TestBoard({
     }, i > 0 && /*#__PURE__*/React.createElement("span", {
       className: "dot"
     }, "."), /*#__PURE__*/React.createElement("button", {
-      className: "oct" + (slot === i ? " on" : ""),
+      className: "oct" + (x == null ? " blank" : "") + (slot === i ? " on" : ""),
       onClick: () => !locked && set({
         slot: i,
         calc: null
       })
-    }, x == null ? "—" : x))))), /*#__PURE__*/React.createElement(Calc, {
+    }, x == null ? "_" : x))))), /*#__PURE__*/React.createElement(Calc, {
       value: st.calc,
       onChange: c => {
         const t = c ? c.nums.reduce((a, n, i) => i === 0 ? n : c.ops[i - 1] === "−" ? a - n : a + n, 0) : 0;
@@ -1612,7 +1614,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .pbar-in{height:100%;background:#58a6ff;border-radius:99px;transition:width .35s}
 .pnum{font-size:13px;color:#8b949e;font-variant-numeric:tabular-nums}
 
-.given{background:#161b22;border:1.5px solid #30363d;border-radius:12px;padding:4px 14px;margin-bottom:14px}
+.given{background:#161b22;border:0;border-radius:12px;padding:4px 14px;margin-bottom:14px}
 .grow{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   padding:11px 0;border-bottom:1px solid #21262d}
 .grow:last-child{border-bottom:0}
@@ -1625,6 +1627,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 
 /* 盤 */
 .box{margin-top:2px}
+.lead.now{border-left:3px solid #58a6ff;padding-left:9px;color:#e6edf3}
+.lead.past{color:#484f58}
 .lead{font-size:13px;color:#8b949e;line-height:1.7;margin:14px 0 8px}
 .lead:first-child{margin-top:0}
 .lead b{color:#e6edf3;font-size:17px;font-family:ui-monospace,Menlo,monospace}
@@ -1687,7 +1691,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dwhy{text-align:center;font-size:13px;color:#8b949e;margin:8px 0 16px;
   font-family:ui-monospace,Menlo,monospace}
 .dcard{font-size:34px;font-weight:800;text-align:center;padding:22px 8px;margin:16px 0;
-  font-family:ui-monospace,Menlo,monospace;background:#161b22;border:1.5px solid #30363d;border-radius:16px;
+  font-family:ui-monospace,Menlo,monospace;background:#161b22;border:0;border-radius:16px;
   word-break:break-all}
 .dopts{display:grid;grid-template-columns:1fr;gap:8px}
 .dopt{display:flex;align-items:center;justify-content:center;gap:10px;min-height:44px;padding:10px 6px;
@@ -1719,6 +1723,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   font-family:ui-monospace,Menlo,monospace;color:#8b949e;padding:8px 2px}
 .num.on{color:#79c0ff}
 .oct.on{border-color:#58a6ff;background:#132030;color:#79c0ff;font-weight:900}
+/* まだ数字が入っていない枠は破線。入ると実線に変わる */
+.oct.blank{border-style:dashed;background:none;color:#484f58}
 .dot{font-size:22px;font-weight:800;color:#8b949e;padding:0 1px}
 .sub{font-size:13px;color:#8b949e;margin:-4px 0 8px}
 /* ステージの札。上が名前、下が「練習する」「テストをする」の2つ */
@@ -1754,7 +1760,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-row.w9 .sp-c{font-size:11px}
 .sp-w{font-size:11px;color:#8b949e;text-align:center}
 
-.derive{background:#161b22;border:1px solid #21262d;border-radius:12px;padding:4px 14px;margin-top:16px}
+.derive{background:#161b22;border:0;border-radius:12px;padding:4px 14px;margin-top:16px}
 .d-r{display:flex;justify-content:space-between;align-items:baseline;gap:12px;
   padding:9px 0;border-bottom:1px solid #21262d}
 .d-r:last-child{border-bottom:0}
@@ -1793,7 +1799,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 
 /* 計算するところ。＋と− だけ */
 .calc{margin-top:18px}
-.calc-d{background:#0f141b;border:1px solid #21262d;border-radius:12px;
+.calc-d{background:#0f141b;border:0;border-radius:12px;
   padding:12px 14px;margin-bottom:8px;text-align:right}
 .calc-e{font-size:15px;color:#8b949e;font-family:ui-monospace,Menlo,monospace;
   word-break:break-all;min-height:20px;line-height:1.5}
@@ -1805,7 +1811,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .k.w2{grid-column:span 2}
 
 /* 解き方 */
-.why{margin-top:8px;background:#161b22;border:1px solid #30363d;border-radius:12px;padding:14px}
+.why{margin-top:8px;background:#161b22;border:0;border-radius:12px;padding:14px}
 .why-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .step{display:grid;grid-template-columns:20px 1fr;gap:4px 9px;padding:9px 0;border-top:1px solid #21262d}
 .step:first-of-type{border-top:0}

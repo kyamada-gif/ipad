@@ -129,9 +129,10 @@ for (const m of src.matchAll(/className=\{?["`]([^"`{}]+)["`]/g)) {
 for (const m of src.matchAll(/["`]\s+([a-z][a-z0-9-]*)["`]/g)) { /* 条件付きで足すクラス */ used.add(m[1]); }
 for (const m of src.matchAll(/,\s*"([a-z][a-z0-9-]*)"\)\}/g)) used.add(m[1]);  /* key(…, "op") の形 */
 for (const m of src.matchAll(/\?\s*"([a-z][a-z0-9-]*)"\s*:\s*""/g)) used.add(m[1]);  /* 条件で付け外しするクラス */
+for (const m of src.matchAll(/\?\s*"([a-z][a-z0-9-]*)"\s*:\s*"([a-z][a-z0-9-]*)"/g)) { used.add(m[1]); used.add(m[2]); }
 const defined = new Set();
 for (const m of cssBody.matchAll(/\.([a-z][a-z0-9-]*)/g)) defined.add(m[1]);
-const noStyle = [...used].filter((c) => !defined.has(c) && !["wrap"].includes(c));
+const noStyle = [...used].filter((c) => !defined.has(c) && !["wrap", "auto", "smooth"].includes(c));
 const noUse = [...defined].filter((c) => !used.has(c));
 // 文字の大きさは7段だけ。色は決めた12色だけ。
 // Apple の目安：小さい文字は 11px 以上、押すところは 44px 以上、見出しと本文は大きさで差をつける。
