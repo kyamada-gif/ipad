@@ -145,6 +145,39 @@ function addrWith(ip, oct, byte, fill) {
 /** 線から右をぜんぶ 1 にした値。cut=3 なら 00011111 = 31。 */
 const restOnes = (cut) => 255 >> cut;
 
+/** ステージ5のテストの「手順テスト」。3ラウンドぶんの、聞くことと・正解と・外れ。
+ *  外れは**別のステージのレシピとの混同**が主力。本番は「これはステージ5だ」と教えてくれない。
+ *  順番ちがいは「**まだ材料がなくて実行できない**」型だけ入れる。でたらめは入れない。 */
+function stepRounds(ip, len) {
+  const oc = cutOct(len), cut = cutBit(len);
+  const p = ip.split(".").map(Number);
+  const m = maskStr(len).split(".").map(Number);
+  const bits = bin8(p[oc]).split("").map(Number);
+  const keep = bits.slice(0, cut).reduce((a, c, i) => a + (c ? [128,64,32,16,8,4,2,1][i] : 0), 0);
+  const rs = [
+    { ask: "まず、何をしますか？",
+      ok: "サブネットマスクを左から見て、はじめて 255 でなくなる数を探す",
+      ng: ["IPアドレスの、いちばん右の数を 1 と 0 にする",
+        "サブネットマスクを 255.255.255.255 から引く",
+        `IPアドレスの数から、サブネットマスクの数を引く`],
+      todo: "サブネットマスクの、その数を押す", kind: "oct", want: oc },
+    { ask: "つぎは、何をしますか？",
+      ok: `おなじオクテットの IPアドレスの数（${p[oc]}）を 1 と 0 にする`,
+      ng: ["線から右をぜんぶ 0 にする",
+        `となりのオクテットの数（${p[oc === 0 ? 1 : oc - 1]}）を 1 と 0 にする`,
+        `${p[oc]} に ＋1 する`],
+      todo: `${p[oc]} を 1 と 0 にして、8つのマスに入れる`, kind: "bits", want: p[oc] },
+    { ask: "つぎは、何をしますか？",
+      ok: "線から右をぜんぶ 0 にした数と、ぜんぶ 1 にした数を出す",
+      ng: ["線から左をぜんぶ 0 にする",
+        "1 と 0 をぜんぶひっくり返す",
+        "ぜんぶ 0 にした数に ＋1、ぜんぶ 1 にした数に −1 する"],
+      todo: "線から右のマスを、ぜんぶ 0 にする", kind: "fill", want: keep, want2: keep + restOnes(cut) },
+  ];
+  for (const r of rs) r.opts = shuffle([r.ok].concat(r.ng));
+  return rs;
+}
+
 /** 押した2つの住所から、そのステージの答えを組み立てる。画面では計算しない。 */
 function pairOut(net, bc, goal) {
   return goal === "range"
@@ -664,7 +697,7 @@ const EXAMPLES = {
  *  ease … 「5問の中の位置」（0 が最初、1 が最後）。前半はやさしい数にする
  *  test … 表なしの回。3〜7ステージは答えを打つのが重いので、選ぶ形にする
  *          （本番の CCNA も選択式。まちがいの選択肢はよくある間違いから作る） */
-function makeQuestion(stationId, ease, test, goal) {
+function makeQuestion(stationId, ease, test, goal, steps) {
   const g = GEN[stationId];
   if (!g) throw new Error("unknown station: " + stationId);
   let q = g(ease);
@@ -672,6 +705,8 @@ function makeQuestion(stationId, ease, test, goal) {
   for (let i = 0; goal && q.goal !== goal && i < 60; i++) q = g(ease);
   if (test) {
     q.test = true;
+    // ステージ5の前半は「手順テスト」。後半は本番と同じ形（メモだけ）
+    if (steps && stationId === "S3") q.steps5 = stepRounds(q.board.ip, q.board.len);
     // プレフィックス長↔サブネットマスクは、自分で書く（選ぶと消去法で当たる）
     if (stationId === "S8") return q;
     const w = wrongsOf(q).filter((x) => x && x !== q.answer);
@@ -685,6 +720,6 @@ function makeQuestion(stationId, ease, test, goal) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { STATIONS, EXAMPLES, HOW, LINK, NEXT, EXLINE, GEN, addrWith, pairOut, restOnes, makeQuestion, wrongsOf, splitOut, pickOut, stackOut, maskBoardOut,
+  module.exports = { STATIONS, EXAMPLES, HOW, LINK, NEXT, EXLINE, GEN, addrWith, pairOut, restOnes, stepRounds, makeQuestion, wrongsOf, splitOut, pickOut, stackOut, maskBoardOut,
     ipToInt, intToIp, maskStr, netInt, bcInt, bin8, cutOct, cutBit, breakdown };
 }

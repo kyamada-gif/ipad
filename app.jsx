@@ -127,6 +127,7 @@ function Play({ plan, onDone, onQuit }) {
   const [queue, setQueue] = useState(plan.queue);
   const [idx, setIdx] = useState(0);
   const [judged, setJudged] = useState(null);
+  const [slip, setSlip] = useState(false);
   const [val, setVal] = useState(null);      // 盤の状態。盤ごとに形がちがう
   const [results, setResults] = useState([]);
   // そのステージが初めてなら、最初に教材の見本を出す。読んだ直後に「これだ」とつながるように
@@ -154,16 +155,20 @@ function Play({ plan, onDone, onQuit }) {
     clearTimeout(timer.current);
     if (idx + 1 >= queue.length) { onDone(rs); return; }
     // 盤の中身も必ず消す。消し忘れると、前の答えが残ったまま次の問題が始まる
-    setIdx(idx + 1); setJudged(null); setVal(null); startedAt.current = Date.now();
+    setIdx(idx + 1); setJudged(null); setSlip(false); setVal(null); startedAt.current = Date.now();
   };
 
   /** 正解するまで次へ進まない。これは全体で1つの決まり。
       点になるのは**最初の答えだけ**（やり直しで全員が合格にならないように） */
-  const retry = () => { setJudged(null); setVal(null); };
+  const retry = () => { setJudged(null); setSlip(false); setVal(null); };
 
   const answer = (out) => {
     if (judged !== null) return;
-    const ok = String(out) === String(q.answer);
+    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
+    const slipped = String(out).startsWith("__slip__:");
+    const real = slipped ? String(out).slice(9) : String(out);
+    const ok = !slipped && real === String(q.answer);
+    setSlip(slipped && real === String(q.answer));   // 最後は合っていたが、途中で外した
     setJudged(ok); buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some((r) => r.idx === idx);
@@ -222,8 +227,12 @@ function Play({ plan, onDone, onQuit }) {
 
         {judged !== null && (
           <div className="verdict">
-            <div className={"dhead " + (judged ? "ok" : "ng")}>{judged ? "✓ 正解" : "✕ 不正解"}</div>
-            {!judged && <div className="j-ans">答えは <b>{String(q.answer)}</b></div>}
+            <div className={"dhead " + (judged ? "ok" : "ng")}>
+              {judged ? "✓ 正解" : slip ? "✕ とちゅうでまちがえました" : "✕ 不正解"}
+            </div>
+            {!judged && (slip
+              ? <div className="j-ans">点になるのは、ぜんぶ最初に合ったときだけです</div>
+              : <div className="j-ans">答えは <b>{String(q.answer)}</b></div>)}
             {judged && q.tip && <div className="j-tip">💡 {q.tip}</div>}
             {/* 丸暗記させるステージでは、手順を出さない。答えだけでよい */}
             {judged === false && !q.memorize && (
@@ -263,7 +272,11 @@ function Tutorial({ station, goal, lead, onSolved }) {
   const again = () => { setVal(null); setJudged(null); };
   const answer = (out) => {
     if (judged !== null) return;
-    const ok = String(out) === String(q.answer);
+    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
+    const slipped = String(out).startsWith("__slip__:");
+    const real = slipped ? String(out).slice(9) : String(out);
+    const ok = !slipped && real === String(q.answer);
+    setSlip(slipped && real === String(q.answer));   // 最後は合っていたが、途中で外した
     setJudged(ok); buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
     // 押した直後に、判定が目に入るようにする（スクロールしないと見えないのを防ぐ）
@@ -1067,6 +1080,120 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
     );
   }
 
+  // ステージ5の手順テスト。**次に何をするかを選ばせ、選んだ処理だけをやらせる。**
+  // 道具は「選んだ処理をやる場所」だけ。重み表も電卓も出さない
+  if (q.steps5) {
+    const R = q.steps5, r = st.r || 0, round = R[r];
+    // 手順が終わったら、いつもの4択で締める
+    const Done = () => (
+      <>
+        {(st.log || []).map((x, i) => (
+          <div key={i} className="donerow"><span>{i + 1}　{x.ask}</span><b>{x.did}</b></div>
+        ))}
+      </>
+    );
+    if (!round) {
+      return (
+        <div className="box">
+          <Done />
+          <div className="lead now">答えはどれですか？</div>
+          <div className="choices">
+            {(q.choices || [String(q.answer)]).map((c) => (
+              <button key={c} className={"ch" + (st.pick === c ? " on" : "")
+                + (locked && c === String(q.answer) ? " right" : "")
+                + (locked && st.pick === c && c !== String(q.answer) ? " wrong" : "")}
+                onClick={() => !locked && set({ pick: c })}>
+                <span>{c}</span>
+                {locked && st.pick === c && c !== String(q.answer) && <i>あなたの回答</i>}
+              </button>
+            ))}
+          </div>
+          <button className="next" onClick={() => onSubmit(st.slip ? "__slip__:" + st.pick : st.pick)}
+            disabled={locked || !st.pick}>これで決定</button>
+        </div>
+      );
+    }
+    const picked = st.picked || null, doneAsk = st.doneAsk || false;
+    const bits = st.bits || 0, sum = W8.reduce((a, w) => a + (bits & w ? w : 0), 0);
+    const miss = () => set({ bad: true });
+    const pick = (a) => {
+      if (doneAsk) return;
+      if (a === round.ok) set({ picked: a, doneAsk: true, bad: false });
+      else set({ picked: a, bad: true, slip: true });
+    };
+    // 済んだ処理を残す。段を進むたびに覚えておくのはきつい
+    const noteOf = () => {
+      if (round.kind === "oct") {
+        // 線の位置は、この2進数の「いちばん右の 1 のうしろ」。
+        // あとの段で思い出さなくていいように、ここに残す
+        const mv = Number(maskStr(q.board.len).split(".")[st.oct]);
+        return `${mv} → ${bin8(mv)}`;
+      }
+      if (round.kind === "bits") return `${round.want} → ${W8.map((w) => (bits & w ? 1 : 0)).join("")}`;
+      return `ぜんぶ 0 → ${round.want}　／　ぜんぶ 1 → ${round.want2}`;
+    };
+    const nextRound = () => set({ r: r + 1, picked: null, doneAsk: false, bad: false, oct: null, bits: 0, step2: false,
+      log: (st.log || []).concat([{ ask: round.ok, did: noteOf() }]) });
+    // その処理ができたか
+    const okNow = round.kind === "oct" ? st.oct === round.want
+      : round.kind === "bits" ? sum === round.want
+        : st.step2 ? sum === round.want2 : sum === round.want;
+    const doIt = () => {
+      if (!okNow) { set({ bad: true, slip: true }); return; }
+      if (round.kind === "fill" && !st.step2) { set({ step2: true, bad: false }); return; }
+      if (r + 1 >= R.length) set({ r: R.length, picked: null, doneAsk: false, bad: false,
+        log: (st.log || []).concat([{ ask: round.ok, did: noteOf() }]) });
+      else nextRound();
+    };
+    return (
+      <div className="box">
+        <Done />
+        <div className="lead now">{round.ask}</div>
+        <div className="choices">
+          {round.opts.map((a) => (
+            <button key={a} className={"ch" + (picked === a ? (a === round.ok ? " right" : " wrong") : "")}
+              onClick={() => pick(a)}>{a}</button>
+          ))}
+        </div>
+        {doneAsk && (
+          <>
+            <div className="lead now">{st.step2 ? "つぎは、おなじ並びで、ぜんぶ 1 にする" : round.todo}</div>
+            {round.kind === "oct" ? (
+              <>
+                <div className="dots"><span className="d-lab">IP</span>
+                  {q.board.ip.split(".").map((v, i) => (
+                    <React.Fragment key={i}>{i > 0 && <span className="dot">.</span>}
+                      <span className="num">{v}</span></React.Fragment>))}
+                </div>
+                <div className="dots"><span className="d-lab">マスク</span>
+                  {maskStr(q.board.len).split(".").map((v, i) => (
+                    <React.Fragment key={i}>{i > 0 && <span className="dot">.</span>}
+                      <button className={"oct" + (st.oct === i ? " on" : "")}
+                        onClick={() => set({ oct: i, bad: false })}>{v}</button></React.Fragment>))}
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="row8">
+                  {W8.map((w) => (
+                    <button key={w} className={"cell bare" + (bits & w ? " on" : "")}
+                      onClick={() => set({ bits: bits & w ? bits - w : bits + w, bad: false })}>
+                      <span className="c-v">{bits & w ? 1 : 0}</span>
+                    </button>
+                  ))}
+                </div>
+                <div className="out"><span className="o-n">この8つ ＝ <b>{sum}</b></span></div>
+              </>
+            )}
+            {st.bad && <div className="dhead ng">✕ ちがいます</div>}
+            <button className="next" onClick={doIt}>できた</button>
+          </>
+        )}
+        {st.bad && !doneAsk && <div className="dhead ng">✕ ちがいます</div>}
+      </div>
+    );
+  }
+
   if (q.station === "S2") {
     const bits = st.bits || 0;
     const W = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -1095,6 +1222,25 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
 
   return (
     <div className="box">
+      {/* 本番の試験会場では、書いて消せるボードが渡される。
+          「白い書く場所」は本番にもある補助なので、出しても本番より甘くならない。
+          **重みは書かない**（思い出す仕事を機械が先にやってしまう） */}
+      {q.input === "split" && (
+        <>
+          <div className="sub">メモ（使っても使わなくてもよい。採点しません）</div>
+          <div className="row8">
+            {W8.map((w) => (
+              <button key={w} className={"cell bare" + ((st.memo || 0) & w ? " on" : "")}
+                onClick={() => !locked && set({ memo: (st.memo || 0) ^ w })}>
+                <span className="c-v">{(st.memo || 0) & w ? 1 : 0}</span>
+              </button>
+            ))}
+          </div>
+          {!!st.memo && (
+            <div className="out"><span className="o-n">この8つ ＝ <b>{W8.reduce((a, w) => a + (st.memo & w ? w : 0), 0)}</b></span></div>
+          )}
+        </>
+      )}
       <div className="choices">
         {(q.choices || [String(q.answer)]).map((c) => (
           <button key={c}
@@ -1184,8 +1330,10 @@ export default function App() {
     for (let i = 0; i < n; i++) {
       // 練習は**よく出るやつだけ**を繰り返す（反射で出るようにするため）。
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
-      let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test);
-      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test);
+      // ステージ5のテストは、前半5問が手順テスト、後半5問が本番と同じ形
+      const steps = test && station === "S3" && i < 5;
+      let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
+      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
       seen.add(keyOf(q2));
       queue.push({ q: q2, scored: true });
     }
@@ -1390,6 +1538,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tut{border-top:1px solid #21262d;padding-top:14px;margin-top:14px}
 .tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
+/* 済んだ処理。何をして何が出たかを残す */
+.donerow{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin-bottom:6px;
+  border-left:3px solid #21262d;font-size:13px;color:#8b949e}
+.donerow b{color:#e6edf3;font-family:ui-monospace,Menlo,monospace}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
 .dhead.ng{color:#ff7b72}

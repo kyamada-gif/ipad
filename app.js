@@ -167,6 +167,7 @@ function Play({
   const [queue, setQueue] = useState(plan.queue);
   const [idx, setIdx] = useState(0);
   const [judged, setJudged] = useState(null);
+  const [slip, setSlip] = useState(false);
   const [val, setVal] = useState(null); // 盤の状態。盤ごとに形がちがう
   const [results, setResults] = useState([]);
   // そのステージが初めてなら、最初に教材の見本を出す。読んだ直後に「これだ」とつながるように
@@ -204,6 +205,7 @@ function Play({
     // 盤の中身も必ず消す。消し忘れると、前の答えが残ったまま次の問題が始まる
     setIdx(idx + 1);
     setJudged(null);
+    setSlip(false);
     setVal(null);
     startedAt.current = Date.now();
   };
@@ -212,11 +214,16 @@ function Play({
       点になるのは**最初の答えだけ**（やり直しで全員が合格にならないように） */
   const retry = () => {
     setJudged(null);
+    setSlip(false);
     setVal(null);
   };
   const answer = out => {
     if (judged !== null) return;
-    const ok = String(out) === String(q.answer);
+    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
+    const slipped = String(out).startsWith("__slip__:");
+    const real = slipped ? String(out).slice(9) : String(out);
+    const ok = !slipped && real === String(q.answer);
+    setSlip(slipped && real === String(q.answer)); // 最後は合っていたが、途中で外した
     setJudged(ok);
     buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
@@ -278,9 +285,11 @@ function Play({
     className: "verdict"
   }, /*#__PURE__*/React.createElement("div", {
     className: "dhead " + (judged ? "ok" : "ng")
-  }, judged ? "✓ 正解" : "✕ 不正解"), !judged && /*#__PURE__*/React.createElement("div", {
+  }, judged ? "✓ 正解" : slip ? "✕ とちゅうでまちがえました" : "✕ 不正解"), !judged && (slip ? /*#__PURE__*/React.createElement("div", {
     className: "j-ans"
-  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
+  }, "\u70B9\u306B\u306A\u308B\u306E\u306F\u3001\u305C\u3093\u3076\u6700\u521D\u306B\u5408\u3063\u305F\u3068\u304D\u3060\u3051\u3067\u3059") : /*#__PURE__*/React.createElement("div", {
+    className: "j-ans"
+  }, "\u7B54\u3048\u306F ", /*#__PURE__*/React.createElement("b", null, String(q.answer)))), judged && q.tip && /*#__PURE__*/React.createElement("div", {
     className: "j-tip"
   }, "\uD83D\uDCA1 ", q.tip), judged === false && !q.memorize && /*#__PURE__*/React.createElement("div", {
     className: "why"
@@ -325,7 +334,11 @@ function Tutorial({
   };
   const answer = out => {
     if (judged !== null) return;
-    const ok = String(out) === String(q.answer);
+    // 手順テストで途中に外したときは「__slip__:選んだ答え」で来る
+    const slipped = String(out).startsWith("__slip__:");
+    const real = slipped ? String(out).slice(9) : String(out);
+    const ok = !slipped && real === String(q.answer);
+    setSlip(slipped && real === String(q.answer)); // 最後は合っていたが、途中で外した
     setJudged(ok);
     buzz(ok ? 30 : 60);
     if (ok && onSolved) onSolved();
@@ -1323,6 +1336,168 @@ function TestBoard({
       disabled: locked || !done
     }, toMask ? done ? `${out} で決定` : "4つとも入れてください" : `/${v} で決定`));
   }
+
+  // ステージ5の手順テスト。**次に何をするかを選ばせ、選んだ処理だけをやらせる。**
+  // 道具は「選んだ処理をやる場所」だけ。重み表も電卓も出さない
+  if (q.steps5) {
+    const R = q.steps5,
+      r = st.r || 0,
+      round = R[r];
+    // 手順が終わったら、いつもの4択で締める
+    const Done = () => /*#__PURE__*/React.createElement(React.Fragment, null, (st.log || []).map((x, i) => /*#__PURE__*/React.createElement("div", {
+      key: i,
+      className: "donerow"
+    }, /*#__PURE__*/React.createElement("span", null, i + 1, "\u3000", x.ask), /*#__PURE__*/React.createElement("b", null, x.did))));
+    if (!round) {
+      return /*#__PURE__*/React.createElement("div", {
+        className: "box"
+      }, /*#__PURE__*/React.createElement(Done, null), /*#__PURE__*/React.createElement("div", {
+        className: "lead now"
+      }, "\u7B54\u3048\u306F\u3069\u308C\u3067\u3059\u304B\uFF1F"), /*#__PURE__*/React.createElement("div", {
+        className: "choices"
+      }, (q.choices || [String(q.answer)]).map(c => /*#__PURE__*/React.createElement("button", {
+        key: c,
+        className: "ch" + (st.pick === c ? " on" : "") + (locked && c === String(q.answer) ? " right" : "") + (locked && st.pick === c && c !== String(q.answer) ? " wrong" : ""),
+        onClick: () => !locked && set({
+          pick: c
+        })
+      }, /*#__PURE__*/React.createElement("span", null, c), locked && st.pick === c && c !== String(q.answer) && /*#__PURE__*/React.createElement("i", null, "\u3042\u306A\u305F\u306E\u56DE\u7B54")))), /*#__PURE__*/React.createElement("button", {
+        className: "next",
+        onClick: () => onSubmit(st.slip ? "__slip__:" + st.pick : st.pick),
+        disabled: locked || !st.pick
+      }, "\u3053\u308C\u3067\u6C7A\u5B9A"));
+    }
+    const picked = st.picked || null,
+      doneAsk = st.doneAsk || false;
+    const bits = st.bits || 0,
+      sum = W8.reduce((a, w) => a + (bits & w ? w : 0), 0);
+    const miss = () => set({
+      bad: true
+    });
+    const pick = a => {
+      if (doneAsk) return;
+      if (a === round.ok) set({
+        picked: a,
+        doneAsk: true,
+        bad: false
+      });else set({
+        picked: a,
+        bad: true,
+        slip: true
+      });
+    };
+    // 済んだ処理を残す。段を進むたびに覚えておくのはきつい
+    const noteOf = () => {
+      if (round.kind === "oct") {
+        // 線の位置は、この2進数の「いちばん右の 1 のうしろ」。
+        // あとの段で思い出さなくていいように、ここに残す
+        const mv = Number(maskStr(q.board.len).split(".")[st.oct]);
+        return `${mv} → ${bin8(mv)}`;
+      }
+      if (round.kind === "bits") return `${round.want} → ${W8.map(w => bits & w ? 1 : 0).join("")}`;
+      return `ぜんぶ 0 → ${round.want}　／　ぜんぶ 1 → ${round.want2}`;
+    };
+    const nextRound = () => set({
+      r: r + 1,
+      picked: null,
+      doneAsk: false,
+      bad: false,
+      oct: null,
+      bits: 0,
+      step2: false,
+      log: (st.log || []).concat([{
+        ask: round.ok,
+        did: noteOf()
+      }])
+    });
+    // その処理ができたか
+    const okNow = round.kind === "oct" ? st.oct === round.want : round.kind === "bits" ? sum === round.want : st.step2 ? sum === round.want2 : sum === round.want;
+    const doIt = () => {
+      if (!okNow) {
+        set({
+          bad: true,
+          slip: true
+        });
+        return;
+      }
+      if (round.kind === "fill" && !st.step2) {
+        set({
+          step2: true,
+          bad: false
+        });
+        return;
+      }
+      if (r + 1 >= R.length) set({
+        r: R.length,
+        picked: null,
+        doneAsk: false,
+        bad: false,
+        log: (st.log || []).concat([{
+          ask: round.ok,
+          did: noteOf()
+        }])
+      });else nextRound();
+    };
+    return /*#__PURE__*/React.createElement("div", {
+      className: "box"
+    }, /*#__PURE__*/React.createElement(Done, null), /*#__PURE__*/React.createElement("div", {
+      className: "lead now"
+    }, round.ask), /*#__PURE__*/React.createElement("div", {
+      className: "choices"
+    }, round.opts.map(a => /*#__PURE__*/React.createElement("button", {
+      key: a,
+      className: "ch" + (picked === a ? a === round.ok ? " right" : " wrong" : ""),
+      onClick: () => pick(a)
+    }, a))), doneAsk && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "lead now"
+    }, st.step2 ? "つぎは、おなじ並びで、ぜんぶ 1 にする" : round.todo), round.kind === "oct" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "dots"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "d-lab"
+    }, "IP"), q.board.ip.split(".").map((v, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "dot"
+    }, "."), /*#__PURE__*/React.createElement("span", {
+      className: "num"
+    }, v)))), /*#__PURE__*/React.createElement("div", {
+      className: "dots"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "d-lab"
+    }, "\u30DE\u30B9\u30AF"), maskStr(q.board.len).split(".").map((v, i) => /*#__PURE__*/React.createElement(React.Fragment, {
+      key: i
+    }, i > 0 && /*#__PURE__*/React.createElement("span", {
+      className: "dot"
+    }, "."), /*#__PURE__*/React.createElement("button", {
+      className: "oct" + (st.oct === i ? " on" : ""),
+      onClick: () => set({
+        oct: i,
+        bad: false
+      })
+    }, v))))) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+      className: "row8"
+    }, W8.map(w => /*#__PURE__*/React.createElement("button", {
+      key: w,
+      className: "cell bare" + (bits & w ? " on" : ""),
+      onClick: () => set({
+        bits: bits & w ? bits - w : bits + w,
+        bad: false
+      })
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "c-v"
+    }, bits & w ? 1 : 0)))), /*#__PURE__*/React.createElement("div", {
+      className: "out"
+    }, /*#__PURE__*/React.createElement("span", {
+      className: "o-n"
+    }, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, sum)))), st.bad && /*#__PURE__*/React.createElement("div", {
+      className: "dhead ng"
+    }, "\u2715 \u3061\u304C\u3044\u307E\u3059"), /*#__PURE__*/React.createElement("button", {
+      className: "next",
+      onClick: doIt
+    }, "\u3067\u304D\u305F")), st.bad && !doneAsk && /*#__PURE__*/React.createElement("div", {
+      className: "dhead ng"
+    }, "\u2715 \u3061\u304C\u3044\u307E\u3059"));
+  }
   if (q.station === "S2") {
     const bits = st.bits || 0;
     const W = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -1357,7 +1532,23 @@ function TestBoard({
   }
   return /*#__PURE__*/React.createElement("div", {
     className: "box"
-  }, /*#__PURE__*/React.createElement("div", {
+  }, q.input === "split" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "\u30E1\u30E2\uFF08\u4F7F\u3063\u3066\u3082\u4F7F\u308F\u306A\u304F\u3066\u3082\u3088\u3044\u3002\u63A1\u70B9\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+    className: "row8"
+  }, W8.map(w => /*#__PURE__*/React.createElement("button", {
+    key: w,
+    className: "cell bare" + ((st.memo || 0) & w ? " on" : ""),
+    onClick: () => !locked && set({
+      memo: (st.memo || 0) ^ w
+    })
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "c-v"
+  }, (st.memo || 0) & w ? 1 : 0)))), !!st.memo && /*#__PURE__*/React.createElement("div", {
+    className: "out"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "o-n"
+  }, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, W8.reduce((a, w) => a + (st.memo & w ? w : 0), 0))))), /*#__PURE__*/React.createElement("div", {
     className: "choices"
   }, (q.choices || [String(q.answer)]).map(c => /*#__PURE__*/React.createElement("button", {
     key: c,
@@ -1462,8 +1653,10 @@ function App() {
     for (let i = 0; i < n; i++) {
       // 練習は**よく出るやつだけ**を繰り返す（反射で出るようにするため）。
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
-      let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test);
-      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test);
+      // ステージ5のテストは、前半5問が手順テスト、後半5問が本番と同じ形
+      const steps = test && station === "S3" && i < 5;
+      let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
+      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
       seen.add(keyOf(q2));
       queue.push({
         q: q2,
@@ -1720,6 +1913,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .tut{border-top:1px solid #21262d;padding-top:14px;margin-top:14px}
 .tut-h{font-size:13px;color:#8b949e;margin-bottom:10px}
 .rbadge{text-align:center;font-size:44px;margin:6px 0 2px;animation:pop .25s ease-out}
+/* 済んだ処理。何をして何が出たかを残す */
+.donerow{display:flex;flex-direction:column;gap:2px;padding:8px 10px;margin-bottom:6px;
+  border-left:3px solid #21262d;font-size:13px;color:#8b949e}
+.donerow b{color:#e6edf3;font-family:ui-monospace,Menlo,monospace}
 .dhead{text-align:center;font-size:22px;font-weight:800;margin-top:18px}
 .dhead.ok{color:#56d364}
 .dhead.ng{color:#ff7b72}
