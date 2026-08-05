@@ -843,9 +843,7 @@ function MaskBoard({
     className: "out"
   }, /*#__PURE__*/React.createElement("span", {
     className: "o-x"
-  }, mask[oct], W8.filter(w => bits & w).map(w => ` − ${w}`).join("")), /*#__PURE__*/React.createElement("span", {
-    className: "o-n"
-  }, "\u6B8B\u308A ", /*#__PURE__*/React.createElement("b", null, mask[oct] - W8.reduce((a, w) => a + (bits & w ? w : 0), 0))))), /*#__PURE__*/React.createElement("div", {
+  }, mask[oct], W8.filter((w, i) => bs[i]).map(w => ` − ${w}`).join(""), " \uFF1D 0"))), /*#__PURE__*/React.createElement("div", {
     className: "derive"
   }, /*#__PURE__*/React.createElement("div", {
     className: "d-r" + (q.goal === "toLen" ? " ans" : "")
@@ -882,20 +880,18 @@ function SplitBoard({
   const mask = maskStr(len).split(".").map(Number);
   const st = value || {
     oct: null,
-    bits: 0,
     zero: false,
     one: false
   };
-  const oct = st.oct,
-    bits = st.bits || 0;
+  const oct = st.oct;
   const set = x => !locked && onChange({
     ...st,
     ...x
   });
   const givenMask = q.given.some(g => g.k === "サブネットマスク");
 
-  // 線は「いちばん右の 1 のうしろ」。自分で作った 1 と 0 から決まる
-  const bs = W8.map(w => bits & w ? 1 : 0);
+  // ②の 1 と 0 も機械が出す。線は、その並びの「いちばん右の 1 のうしろ」
+  const bs = oct == null ? [] : bin8(mask[oct]).split("").map(Number);
   const cut = bs.lastIndexOf(1) + 1;
   // ③の 1 と 0 は機械が出す。**そのかわり、引いていく過程を下に見せる**
   const ipBits = oct == null ? [] : bin8(parts[oct]).split("").map(Number);
@@ -941,22 +937,17 @@ function SplitBoard({
   }, m)))), !givenMask && /*#__PURE__*/React.createElement("div", {
     className: "sub"
   }, "/", len, " \u2192 ", maskStr(len), "\uFF08", byId("S8").no, "\u3064\u76EE\u306E\u30B9\u30C6\u30FC\u30B8\u3067\u3084\u3063\u305F\u3068\u3053\u308D\uFF09"), oct != null && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
-    className: "lead " + (cut > 0 ? "past" : "now")
-  }, "\u2461 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u306E ", /*#__PURE__*/React.createElement("b", null, mask[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B"), /*#__PURE__*/React.createElement("div", {
+    className: "lead past"
+  }, "\u2461 \u30B5\u30D6\u30CD\u30C3\u30C8\u30DE\u30B9\u30AF\u306E ", /*#__PURE__*/React.createElement("b", null, mask[oct]), " \u3092 1 \u3068 0 \u306B\u3059\u308B\u3068"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }, "\u30DE\u30B9\u30AF", /*#__PURE__*/React.createElement("i", null, mask[oct])), /*#__PURE__*/React.createElement("div", {
     className: "sp-row"
-  }, W8.map((w, i) => /*#__PURE__*/React.createElement("button", {
-    key: w,
-    className: "sp-c" + (bits & w ? " on" : "") + (cut === i + 1 ? " edge" : ""),
-    onClick: () => set({
-      bits: bits & w ? bits - w : bits + w,
-      zero: false,
-      one: false
-    })
-  }, bits & w ? 1 : 0))), /*#__PURE__*/React.createElement("div", {
+  }, bs.map((c, i) => /*#__PURE__*/React.createElement("span", {
+    key: i,
+    className: "sp-c fixed" + (cut === i + 1 ? " edge" : "")
+  }, c))), /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }, "\u91CD\u307F"), /*#__PURE__*/React.createElement("div", {
     className: "sp-row w"

@@ -655,9 +655,8 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
           {/* ステージ3と同じ形で、引いていくようすを見せる（暗算をさせない） */}
           <div className="out">
             <span className="o-x">
-              {mask[oct]}{W8.filter((w) => bits & w).map((w) => ` − ${w}`).join("")}
+              {mask[oct]}{W8.filter((w, i) => bs[i]).map((w) => ` − ${w}`).join("")} ＝ 0
             </span>
-            <span className="o-n">残り <b>{mask[oct] - W8.reduce((a, w) => a + (bits & w ? w : 0), 0)}</b></span>
           </div>
         </>
       )}
@@ -685,13 +684,13 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
   const { ip, len } = q.board;
   const parts = ip.split(".").map(Number);
   const mask = maskStr(len).split(".").map(Number);
-  const st = value || { oct: null, bits: 0, zero: false, one: false };
-  const oct = st.oct, bits = st.bits || 0;
+  const st = value || { oct: null, zero: false, one: false };
+  const oct = st.oct;
   const set = (x) => !locked && onChange({ ...st, ...x });
   const givenMask = q.given.some((g) => g.k === "サブネットマスク");
 
-  // 線は「いちばん右の 1 のうしろ」。自分で作った 1 と 0 から決まる
-  const bs = W8.map((w) => (bits & w ? 1 : 0));
+  // ②の 1 と 0 も機械が出す。線は、その並びの「いちばん右の 1 のうしろ」
+  const bs = oct == null ? [] : bin8(mask[oct]).split("").map(Number);
   const cut = bs.lastIndexOf(1) + 1;
   // ③の 1 と 0 は機械が出す。**そのかわり、引いていく過程を下に見せる**
   const ipBits = oct == null ? [] : bin8(parts[oct]).split("").map(Number);
@@ -734,15 +733,12 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
       {oct != null && (
         <>
           {/* マスクを 1 と 0 にするのは自分。IP の 1 と 0 は、その真下に並べて出す */}
-          <div className={"lead " + (cut > 0 ? "past" : "now")}>② サブネットマスクの <b>{mask[oct]}</b> を 1 と 0 にする</div>
+          <div className="lead past">② サブネットマスクの <b>{mask[oct]}</b> を 1 と 0 にすると</div>
           <div className="split">
             <div className="sp-lab">マスク<i>{mask[oct]}</i></div>
             <div className="sp-row">
-              {W8.map((w, i) => (
-                <button key={w} className={"sp-c" + (bits & w ? " on" : "") + (cut === i + 1 ? " edge" : "")}
-                  onClick={() => set({ bits: bits & w ? bits - w : bits + w, zero: false, one: false })}>
-                  {bits & w ? 1 : 0}
-                </button>
+              {bs.map((c, i) => (
+                <span key={i} className={"sp-c fixed" + (cut === i + 1 ? " edge" : "")}>{c}</span>
               ))}
             </div>
             <div className="sp-lab">重み</div>
