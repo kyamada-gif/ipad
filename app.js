@@ -19,14 +19,16 @@ const { useState, useEffect, useRef } = React;
 
 const DRILL_QN = 5; // 練習は5問（手を動かして慣れる場）
 const TEST_QN = 10; // テストは10問（本番と同じ形で測る場）
+const FINAL_QN = 15; // 仕上げだけ15問（8つの型を一通り出してから、もう一巡）
 const DRILL_N = 4; // 練習：5問中4問で ● できた
-const CLEAR_N = 9; // テスト：10問中9問で ★ バッジ
-/** その回の問題数と合格ライン。練習は5問中4問、テストは10問中9問。 */
-const sizeOf = test => test ? TEST_QN : DRILL_QN;
+/** その回の問題数。仕上げのテストだけ多い。 */
+const sizeOf = (test, station) => !test ? DRILL_QN : station === "SF" ? FINAL_QN : TEST_QN;
 /** その問題の「材料」。同じものを1回の中で繰り返さないために使う。 */
 const keyOf = q => q.given.map(g => g.v).join("|");
-/** その回の合格ライン。練習は8割、テストは9割。 */
-const needOf = test => test ? CLEAR_N : DRILL_N;
+/** その回の合格ライン。練習は8割、テストは9割。
+ *  **問題数から出す。**前は 9 と直に書いていたので、15問にしたときに 9/15 のままになるところだった
+ *  （10問→9問、15問→14問。どちらも「まちがえてよいのは1問」でそろう）。 */
+const needOf = (test, station) => test ? Math.ceil(sizeOf(test, station) * 0.9) : DRILL_N;
 const KEY = "ipcalc2-progress";
 const load = () => {
   try {
@@ -87,7 +89,6 @@ function Home({
 }) {
   const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null); // いま開いている札
-  const doneP = STATIONS.filter(s => isLit(progress, s.id)).length;
   const doneT = STATIONS.filter(s => isSolo(progress, s.id)).length;
   return /*#__PURE__*/React.createElement("div", {
     className: "wrap"
@@ -113,9 +114,13 @@ function Home({
     const solo = isSolo(progress, s.id),
       lit = isLit(progress, s.id);
     const open = unlock || isOpen(progress, s);
+    // 仕上げだけは練習が無い。説明の1枚を見たら、そのままテストへ
+    const hasDrill = s.drill !== false;
     // テストは、練習でできてから。手順を知らないまま4択をやっても、
-    // 4回に1回当たるだけで記録が汚れる
-    const canTest = unlock || lit;
+    // 4回に1回当たるだけで記録が汚れる。
+    // **練習が無いステージは、開いた時点でテストに入れる**
+    //（そうしないと lit にならないので、永久に開かない）
+    const canTest = unlock || lit || !hasDrill;
     return /*#__PURE__*/React.createElement("div", {
       key: s.id
     }, g && /*#__PURE__*/React.createElement("div", {
@@ -146,12 +151,16 @@ function Home({
       className: "t-ex"
     }, s.ex)), /*#__PURE__*/React.createElement("span", {
       className: "slot" + (solo ? " got" : "")
-    }, solo ? "🏅" : "")), pick === s.id && open && /*#__PURE__*/React.createElement("div", {
+    }, solo ? "🏅" : "")), pick === s.id && open &&
+    /*#__PURE__*/
+    /* 仕上げは練習が無いので、入口は1つだけ。
+       押すと説明の1枚（本番で聞かれる8つの形）が出て、その下がテストへの入口になる */
+    React.createElement("div", {
       className: "t-go"
     }, /*#__PURE__*/React.createElement("button", {
       className: "go",
       onClick: () => onStart(s.id, null)
-    }, "\u7DF4\u7FD2\u3092\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
+    }, hasDrill ? "練習をする" : "はじめる"), hasDrill && /*#__PURE__*/React.createElement("button", {
       className: "go" + (canTest ? "" : " off"),
       onClick: () => canTest ? onStart(s.id, true) : setBlocked(blocked === s.id ? null : s.id)
     }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B"))), pick === s.id && !open && /*#__PURE__*/React.createElement("div", {
@@ -354,6 +363,17 @@ function Sec({
   }, label), note && /*#__PURE__*/React.createElement("div", {
     className: "sec-n"
   }, note), children);
+}
+
+/** 見本の行に 1. 2. … と番号を振る。**手順が何番目か、目で数えなくてよくする。**
+ *  名札が空の行（ステージ9の「169 = …」「170 = …」）は、上の行のつづきなので番号を飛ばす。 */
+function numbered(rows) {
+  let n = 0;
+  return rows.map(r => ({
+    n: r[0] ? ++n : null,
+    k: r[0],
+    v: r[1]
+  }));
 }
 
 /** 文の中の *…* を太字にする。**大事なひと言だけ**を濃くするための印。 */
@@ -572,7 +592,11 @@ function Memo({
   // チュートリアルが解けたら、次にやること（練習をする）を目立たせる
   const [solved, setSolved] = useState(false);
   const [solved2, setSolved2] = useState(false);
-  const both = station === "S8" ? solved && solved2 : solved;
+  /* 仕上げ（drill: false）だけは、練習そのものを置かない。新しいやり方が無いので、
+     「やってみる」も「練習をする」も、テストと同じ問題をやるだけになる。
+     この1枚を見たら、下は「テストをする」だけ。 */
+  const hasDrill = st.drill !== false;
+  const both = !hasDrill || (station === "S8" ? solved && solved2 : solved);
   return /*#__PURE__*/React.createElement("div", {
     className: "wrap sheet-p"
   }, /*#__PURE__*/React.createElement("div", {
@@ -586,7 +610,7 @@ function Memo({
     className: "mtitle"
   }, st.name), /*#__PURE__*/React.createElement("div", {
     className: "msub2"
-  }, "1\u554F\u3084\u3063\u3066\u3001\u89E3\u304D\u65B9\u3092\u899A\u3048\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  }, hasDrill ? "1問やって、解き方を覚えます" : "本番で聞かれる形を見てから、テストに入ります"), /*#__PURE__*/React.createElement("div", {
     className: "rule"
   }), /*#__PURE__*/React.createElement(Sec, {
     label: "\u524D\u306E\u30B9\u30C6\u30FC\u30B8\u304B\u3089"
@@ -608,12 +632,14 @@ function Memo({
     label: "\u898B\u672C"
   }, /*#__PURE__*/React.createElement("div", {
     className: "ex-t"
-  }, EXAMPLES[station].title), station === "S0" ? /*#__PURE__*/React.createElement(WeightTable, null) : EXAMPLES[station].rows.map((r, i) => /*#__PURE__*/React.createElement("div", {
+  }, EXAMPLES[station].title), station === "S0" ? /*#__PURE__*/React.createElement(WeightTable, null) : numbered(EXAMPLES[station].rows).map((r, i) => /*#__PURE__*/React.createElement("div", {
     key: i,
     className: "ex-r"
-  }, /*#__PURE__*/React.createElement("span", null, r[0]), /*#__PURE__*/React.createElement("b", null, r[1]))), EXAMPLES[station].note && /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "ex-n"
+  }, r.n || ""), /*#__PURE__*/React.createElement("span", null, r.k), /*#__PURE__*/React.createElement("b", null, r.v))), EXAMPLES[station].note && /*#__PURE__*/React.createElement("div", {
     className: "ex-note"
-  }, "\u203B ", EXAMPLES[station].note)), /*#__PURE__*/React.createElement(Sec, {
+  }, "\u203B ", EXAMPLES[station].note)), hasDrill && /*#__PURE__*/React.createElement(Sec, {
     label: "\u3084\u3063\u3066\u307F\u308B",
     note: "\u6B63\u89E3\u3059\u308B\u307E\u3067\u3001\u540C\u3058\u554F\u984C\u3092\u3084\u308A\u76F4\u3057\u307E\u3059\u3002"
   }, station === "S8" ? /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement(Tutorial, {
@@ -630,12 +656,12 @@ function Memo({
     station: station,
     onSolved: () => setSolved(true)
   })), /*#__PURE__*/React.createElement("div", {
-    className: "gotest two"
-  }, /*#__PURE__*/React.createElement("button", {
+    className: "gotest" + (hasDrill ? " two" : "")
+  }, hasDrill && /*#__PURE__*/React.createElement("button", {
     className: "next" + (both ? "" : " calm"),
     onClick: onDrill
   }, "\u7DF4\u7FD2\u3092\u3059\u308B"), /*#__PURE__*/React.createElement("button", {
-    className: "next ghost",
+    className: "next" + (hasDrill ? " ghost" : ""),
     onClick: onTest
   }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B")));
 }
@@ -933,7 +959,7 @@ function MaskBoard({
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (full ? "past" : "now")
-  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "8 \u305A\u3064"), " \u533A\u5207\u3063\u3066\u3001\u305D\u308D\u3063\u305F\u30AA\u30AF\u30C6\u30C3\u30C8\u3092 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u306B\u3057\u307E\u3059") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u304C\u3044\u304F\u3064\u4E26\u3093\u3067\u3044\u308B\u304B\u3092\u9078\u3073\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "8 \u305A\u3064"), " \u533A\u5207\u3063\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "1 \u3060\u3051\u3067\u57CB\u307E\u3063\u305F"), "\u30AA\u30AF\u30C6\u30C3\u30C8\u3092 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u306B\u3057\u307E\u3059") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u304C\u3044\u304F\u3064\u4E26\u3093\u3067\u3044\u308B\u304B\u3092\u9078\u3073\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "dots"
   }, /*#__PURE__*/React.createElement("span", {
     className: "d-lab"
@@ -1818,7 +1844,7 @@ function Result({
     bestMs,
     hadBest
   } = res;
-  const need = needOf(plan.test);
+  const need = needOf(plan.test, plan.station);
   const cleared = correct >= need;
   const st = byId(plan.station);
   const msg = !cleared ? `あと ${need - correct} 問。` : plan.test ? newly ? "バッジをもらいました。" : "バッジはもう持っています。" : newly ? "覚えました。つぎはテストです。" : "覚えたまま保てています。";
@@ -1885,7 +1911,9 @@ function App() {
     }
     const first = !progress[station]; // そのステージが初めてか
     const queue = [];
-    const n = sizeOf(test);
+    const n = sizeOf(test, station);
+    // 仕上げは、8つの型を一通り出してから もう一巡。並び順は毎回まぜる
+    const order = station === "SF" ? finalOrder(n) : null;
     // 同じ材料が1回の中で繰り返し出ないようにする（/24 ばかり出ると練習にならない）
     const seen = new Set();
     for (let i = 0; i < n; i++) {
@@ -1893,8 +1921,7 @@ function App() {
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
       // ステージ5の練習は、**最後の2問**を手順つきにする（盤で慣れてから、手順を自分で選ぶ）
       const steps = !test && station === "S3" && i >= n - 2;
-      // 仕上げは、8つの型が一通り出るように順ぐりで（同じ型ばかり出ると本番の練習にならない）
-      const kind = station === "SF" ? FINAL_KINDS[i % FINAL_KINDS.length] : test && station === "S0" && i === 0 ? "table" : null;
+      const kind = order ? order[i] : test && station === "S0" && i === 0 ? "table" : null;
       const ease = test ? i / (n - 1) : 0;
       let q2 = makeQuestion(station, ease, test, kind, steps);
       for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, ease, test, kind, steps);
@@ -1940,7 +1967,7 @@ function App() {
       hadBest = false;
     if (!quit) {
       const cur = next[plan.station];
-      const need = needOf(plan.test);
+      const need = needOf(plan.test, plan.station);
       if (correct >= need) {
         if (plan.test) {
           newly = !cur.solo;
@@ -2179,10 +2206,17 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
    題の下線が、そのまま表のいちばん上の罫になる */
 .ex-t{font-size:var(--f2);color:var(--ink);font-weight:700;
   padding-bottom:6px;border-bottom:1px solid var(--bg2)}
-.ex-r{display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+/* 番号・手順・答えの3列。**表なので、列をそろえる**（前は左右に寄せるだけだった） */
+/* 手順と答えの2列は、**どちらも縮められるようにして幅を分け合う**。
+   3列目を auto にすると、長い答え（11111111.…11111000 → /29）が縮まず、
+   手順のほうが1文字ずつの縦書きになってしまう。 */
+.ex-r{display:grid;grid-template-columns:1.4em minmax(0,1fr) minmax(0,1.3fr);
+  gap:0 var(--s2);align-items:baseline;
   padding:7px 2px;border-bottom:1px solid var(--bg2)}
+.ex-n{font-style:normal;font-size:var(--f1);color:var(--ink3);text-align:right}
 .ex-r span{font-size:var(--f2);color:var(--ink2)}
-.ex-r b{font-size:var(--f3);color:var(--ink);font-family:ui-monospace,Menlo,monospace;text-align:right}
+.ex-r b{font-size:var(--f3);color:var(--ink);font-family:ui-monospace,Menlo,monospace;
+  text-align:right;word-break:break-all}
 /* 注記。表の行にすると手順の1つに見えるので、外に出して薄くする */
 .ex-note{font-size:var(--f1);color:var(--ink2);line-height:1.7;margin-top:var(--s2)}
 /* 式と答えのあいだをつなぐ1行 */

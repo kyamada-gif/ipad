@@ -19,14 +19,16 @@ import React, { useState, useEffect, useRef } from "react";
 
 const DRILL_QN = 5;     // 練習は5問（手を動かして慣れる場）
 const TEST_QN = 10;     // テストは10問（本番と同じ形で測る場）
+const FINAL_QN = 15;    // 仕上げだけ15問（8つの型を一通り出してから、もう一巡）
 const DRILL_N = 4;      // 練習：5問中4問で ● できた
-const CLEAR_N = 9;      // テスト：10問中9問で ★ バッジ
-/** その回の問題数と合格ライン。練習は5問中4問、テストは10問中9問。 */
-const sizeOf = (test) => (test ? TEST_QN : DRILL_QN);
+/** その回の問題数。仕上げのテストだけ多い。 */
+const sizeOf = (test, station) => (!test ? DRILL_QN : station === "SF" ? FINAL_QN : TEST_QN);
 /** その問題の「材料」。同じものを1回の中で繰り返さないために使う。 */
 const keyOf = (q) => q.given.map((g) => g.v).join("|");
-/** その回の合格ライン。練習は8割、テストは9割。 */
-const needOf = (test) => (test ? CLEAR_N : DRILL_N);
+/** その回の合格ライン。練習は8割、テストは9割。
+ *  **問題数から出す。**前は 9 と直に書いていたので、15問にしたときに 9/15 のままになるところだった
+ *  （10問→9問、15問→14問。どちらも「まちがえてよいのは1問」でそろう）。 */
+const needOf = (test, station) => (test ? Math.ceil(sizeOf(test, station) * 0.9) : DRILL_N);
 
 const KEY = "ipcalc2-progress";
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
@@ -56,7 +58,6 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
 function Home({ progress, unlock, onUnlock, onStart }) {
   const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null);   // いま開いている札
-  const doneP = STATIONS.filter((s) => isLit(progress, s.id)).length;
   const doneT = STATIONS.filter((s) => isSolo(progress, s.id)).length;
 
   return (
@@ -74,9 +75,13 @@ function Home({ progress, unlock, onUnlock, onStart }) {
           const g = GROUPS.find((x) => x.at === s.id);
           const solo = isSolo(progress, s.id), lit = isLit(progress, s.id);
           const open = unlock || isOpen(progress, s);
+          // 仕上げだけは練習が無い。説明の1枚を見たら、そのままテストへ
+          const hasDrill = s.drill !== false;
           // テストは、練習でできてから。手順を知らないまま4択をやっても、
-          // 4回に1回当たるだけで記録が汚れる
-          const canTest = unlock || lit;
+          // 4回に1回当たるだけで記録が汚れる。
+          // **練習が無いステージは、開いた時点でテストに入れる**
+          //（そうしないと lit にならないので、永久に開かない）
+          const canTest = unlock || lit || !hasDrill;
           return (
             <div key={s.id}>
               {g && (
@@ -103,12 +108,18 @@ function Home({ progress, unlock, onUnlock, onStart }) {
                   <span className={"slot" + (solo ? " got" : "")}>{solo ? "🏅" : ""}</span>
                 </button>
                 {pick === s.id && open && (
+                  /* 仕上げは練習が無いので、入口は1つだけ。
+                     押すと説明の1枚（本番で聞かれる8つの形）が出て、その下がテストへの入口になる */
                   <div className="t-go">
-                    <button className="go" onClick={() => onStart(s.id, null)}>練習をする</button>
-                    <button className={"go" + (canTest ? "" : " off")}
-                      onClick={() => (canTest ? onStart(s.id, true) : setBlocked(blocked === s.id ? null : s.id))}>
-                      テストをする
+                    <button className="go" onClick={() => onStart(s.id, null)}>
+                      {hasDrill ? "練習をする" : "はじめる"}
                     </button>
+                    {hasDrill && (
+                      <button className={"go" + (canTest ? "" : " off")}
+                        onClick={() => (canTest ? onStart(s.id, true) : setBlocked(blocked === s.id ? null : s.id))}>
+                        テストをする
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
@@ -293,6 +304,13 @@ function Sec({ label, note, children }) {
   );
 }
 
+/** 見本の行に 1. 2. … と番号を振る。**手順が何番目か、目で数えなくてよくする。**
+ *  名札が空の行（ステージ9の「169 = …」「170 = …」）は、上の行のつづきなので番号を飛ばす。 */
+function numbered(rows) {
+  let n = 0;
+  return rows.map((r) => ({ n: r[0] ? ++n : null, k: r[0], v: r[1] }));
+}
+
 /** 文の中の *…* を太字にする。**大事なひと言だけ**を濃くするための印。 */
 function Rich({ t }) {
   return <>{String(t).split("*").map((s, i) => (i % 2 ? <b key={i}>{s}</b> : s))}</>;
@@ -429,14 +447,18 @@ function Memo({ station, onDrill, onTest, onHome }) {
   // チュートリアルが解けたら、次にやること（練習をする）を目立たせる
   const [solved, setSolved] = useState(false);
   const [solved2, setSolved2] = useState(false);
-  const both = station === "S8" ? (solved && solved2) : solved;
+  /* 仕上げ（drill: false）だけは、練習そのものを置かない。新しいやり方が無いので、
+     「やってみる」も「練習をする」も、テストと同じ問題をやるだけになる。
+     この1枚を見たら、下は「テストをする」だけ。 */
+  const hasDrill = st.drill !== false;
+  const both = !hasDrill || (station === "S8" ? (solved && solved2) : solved);
   return (
     <div className="wrap sheet-p">
       <div className="topbar"><button className="x" onClick={onHome}>✕</button></div>
       {/* 見出しの1かたまり。**いま何をする画面で、10のうちどこか**をここだけで言い切る */}
       <div className="mkind">チュートリアル ・ ステージ {st.no} / {STATIONS.length}</div>
       <div className="mtitle">{st.name}</div>
-      <div className="msub2">1問やって、解き方を覚えます</div>
+      <div className="msub2">{hasDrill ? "1問やって、解き方を覚えます" : "本番で聞かれる形を見てから、テストに入ります"}</div>
       {/* 太い罫。ここから下が中身、という区切り */}
       <div className="rule" />
 
@@ -459,8 +481,8 @@ function Memo({ station, onDrill, onTest, onHome }) {
         <div className="ex-t">{EXAMPLES[station].title}</div>
         {station === "S0"
           ? <WeightTable />
-          : EXAMPLES[station].rows.map((r, i) => (
-            <div key={i} className="ex-r"><span>{r[0]}</span><b>{r[1]}</b></div>
+          : numbered(EXAMPLES[station].rows).map((r, i) => (
+            <div key={i} className="ex-r"><i className="ex-n">{r.n || ""}</i><span>{r.k}</span><b>{r.v}</b></div>
           ))}
         {/* 注記は表の行にしない。手順の1つに見えてしまう */}
         {EXAMPLES[station].note && <div className="ex-note">※ {EXAMPLES[station].note}</div>}
@@ -468,25 +490,28 @@ function Memo({ station, onDrill, onTest, onHome }) {
 
       {/* ── 5 やってみる ── 読むのではなく、1問を最後まで手で解く。
           断り書きは**この段に1回だけ。**向きが2つあるステージでも2回出さない */}
-      <Sec label="やってみる" note="正解するまで、同じ問題をやり直します。">
-        {station === "S8" ? (
-          <>
-            <Tutorial station={station} goal="toMask" lead="① プレフィックス長 → サブネットマスク"
-              onSolved={() => setSolved(true)} />
-            <Tutorial station={station} goal="toLen" lead="② サブネットマスク → プレフィックス長"
-              onSolved={() => setSolved2(true)} />
-          </>
-        ) : (
-          <Tutorial station={station} onSolved={() => setSolved(true)} />
-        )}
-      </Sec>
+      {hasDrill && (
+        <Sec label="やってみる" note="正解するまで、同じ問題をやり直します。">
+          {station === "S8" ? (
+            <>
+              <Tutorial station={station} goal="toMask" lead="① プレフィックス長 → サブネットマスク"
+                onSolved={() => setSolved(true)} />
+              <Tutorial station={station} goal="toLen" lead="② サブネットマスク → プレフィックス長"
+                onSolved={() => setSolved2(true)} />
+            </>
+          ) : (
+            <Tutorial station={station} onSolved={() => setSolved(true)} />
+          )}
+        </Sec>
+      )}
 
       {/* 入口は、いつも画面のいちばん下に貼り付いている。
           練習＝よく出るやつを反射で覚える／テスト＝本番と同じ形で演習。
-          **緑は「いま進む道」1つだけ。**テストは灰の枠にして、どちらが先かを見た目で言う */}
-      <div className="gotest two">
-        <button className={"next" + (both ? "" : " calm")} onClick={onDrill}>練習をする</button>
-        <button className="next ghost" onClick={onTest}>テストをする</button>
+          **緑は「いま進む道」1つだけ。**テストは灰の枠にして、どちらが先かを見た目で言う。
+          仕上げは練習が無いので、テストが1つだけ並ぶ（そのときは緑のベタ） */}
+      <div className={"gotest" + (hasDrill ? " two" : "")}>
+        {hasDrill && <button className={"next" + (both ? "" : " calm")} onClick={onDrill}>練習をする</button>}
+        <button className={"next" + (hasDrill ? " ghost" : "")} onClick={onTest}>テストをする</button>
       </div>
     </div>
   );
@@ -702,7 +727,9 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
       {/* 8・16・24・32 の目盛りを下に置く。/28 なら 24 と 32 の間 ＝ 255 が3つ、が目で分かる */}
       <div className={"lead " + (full ? "past" : "now")}>
         {/* マスク → / の向きでは、まだ「8ずつ区切る」ものが無い。数えるのは 255 の数 */}
-        {q.goal === "toMask" ? <>① 左から <b>8 ずつ</b> 区切って、そろったオクテットを <b>255</b> にします</> : <>① 左から <b>255</b> がいくつ並んでいるかを選びます</>}
+        {/* 「そろったオクテット」では、何がそろったのか分からない。
+            説明の1枚（WAY.S8）と同じ「1 だけで埋まった」に合わせる */}
+        {q.goal === "toMask" ? <>① 左から <b>8 ずつ</b> 区切って、<b>1 だけで埋まった</b>オクテットを <b>255</b> にします</> : <>① 左から <b>255</b> がいくつ並んでいるかを選びます</>}
       </div>
       <div className="dots">
         <span className="d-lab" />
@@ -1449,7 +1476,7 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
    ========================================================================= */
 function Result({ res, plan, onHome, onAgain, onTest }) {
   const { correct, total, newly, newBest, bestMs, hadBest } = res;
-  const need = needOf(plan.test);
+  const need = needOf(plan.test, plan.station);
   const cleared = correct >= need;
   const st = byId(plan.station);
   const msg = !cleared ? `あと ${need - correct} 問。`
@@ -1512,7 +1539,9 @@ export default function App() {
     if (test === "drill") { setSheetOf(station); setScreen("drill"); return; }
     const first = !progress[station];         // そのステージが初めてか
     const queue = [];
-    const n = sizeOf(test);
+    const n = sizeOf(test, station);
+    // 仕上げは、8つの型を一通り出してから もう一巡。並び順は毎回まぜる
+    const order = station === "SF" ? finalOrder(n) : null;
     // 同じ材料が1回の中で繰り返し出ないようにする（/24 ばかり出ると練習にならない）
     const seen = new Set();
     for (let i = 0; i < n; i++) {
@@ -1520,8 +1549,7 @@ export default function App() {
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
       // ステージ5の練習は、**最後の2問**を手順つきにする（盤で慣れてから、手順を自分で選ぶ）
       const steps = !test && station === "S3" && i >= n - 2;
-      // 仕上げは、8つの型が一通り出るように順ぐりで（同じ型ばかり出ると本番の練習にならない）
-      const kind = station === "SF" ? FINAL_KINDS[i % FINAL_KINDS.length]
+      const kind = order ? order[i]
         : (test && station === "S0" && i === 0) ? "table" : null;
       const ease = test ? i / (n - 1) : 0;
       let q2 = makeQuestion(station, ease, test, kind, steps);
@@ -1547,7 +1575,7 @@ export default function App() {
 
     if (!quit) {
       const cur = next[plan.station];
-      const need = needOf(plan.test);
+      const need = needOf(plan.test, plan.station);
       if (correct >= need) {
         if (plan.test) { newly = !cur.solo; next[plan.station] = { ...cur, lit: true, solo: true }; }
         else { newly = !cur.lit; next[plan.station] = { ...cur, lit: true }; }
@@ -1755,10 +1783,17 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
    題の下線が、そのまま表のいちばん上の罫になる */
 .ex-t{font-size:var(--f2);color:var(--ink);font-weight:700;
   padding-bottom:6px;border-bottom:1px solid var(--bg2)}
-.ex-r{display:flex;justify-content:space-between;gap:12px;align-items:baseline;
+/* 番号・手順・答えの3列。**表なので、列をそろえる**（前は左右に寄せるだけだった） */
+/* 手順と答えの2列は、**どちらも縮められるようにして幅を分け合う**。
+   3列目を auto にすると、長い答え（11111111.…11111000 → /29）が縮まず、
+   手順のほうが1文字ずつの縦書きになってしまう。 */
+.ex-r{display:grid;grid-template-columns:1.4em minmax(0,1fr) minmax(0,1.3fr);
+  gap:0 var(--s2);align-items:baseline;
   padding:7px 2px;border-bottom:1px solid var(--bg2)}
+.ex-n{font-style:normal;font-size:var(--f1);color:var(--ink3);text-align:right}
 .ex-r span{font-size:var(--f2);color:var(--ink2)}
-.ex-r b{font-size:var(--f3);color:var(--ink);font-family:ui-monospace,Menlo,monospace;text-align:right}
+.ex-r b{font-size:var(--f3);color:var(--ink);font-family:ui-monospace,Menlo,monospace;
+  text-align:right;word-break:break-all}
 /* 注記。表の行にすると手順の1つに見えるので、外に出して薄くする */
 .ex-note{font-size:var(--f1);color:var(--ink2);line-height:1.7;margin-top:var(--s2)}
 /* 式と答えのあいだをつなぐ1行 */

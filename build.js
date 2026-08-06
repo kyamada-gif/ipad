@@ -63,6 +63,47 @@ if (!jsx.includes("EXAMPLES[")) bad.push("画面: 覚える表（EXAMPLES）を1
     n = g.to;
   }
 }
+/* ステージ7・8は「最も小さい」と書いてあるが、**かかる先が逆**。
+     7（台数）… len が小さいほど台数が多い。条件を満たす他は /len−1。
+                 正解のマスクは候補の中でいちばん大きいので、小さいのは「サブネット」のほう
+     8（個数）… len が大きいほど個数が多い。条件を満たす他は /len+1。
+                 正解のマスクが候補の中でいちばん小さいので、「サブネットマスク」でよい
+   ここが入れ替わると、問いが誤答を指すのに検査は通ってしまう。 */
+{
+  const ipn = (s) => s.split(".").reduce((a, o) => a * 256 + Number(o), 0);
+  const mask = (n) => ipn(require("./gen.js").maskStr ? require("./gen.js").maskStr(n) : "");
+  for (const [id, label, dir, wantSmallestMask] of [["S5", "7", -1, false], ["S6", "8", +1, true]]) {
+    for (let i = 0; i < 200; i++) {
+      const q = makeQuestion(id, i / 199);
+      const len = Number(String(q.answer).match(/\/(\d+)/)[1]);
+      const alts = [len + dir, len + 2 * dir].filter((n) => n >= 1 && n <= 30);
+      if (!alts.length) continue;
+      const me = mask(len);
+      const ok = wantSmallestMask ? alts.every((n) => me < mask(n)) : alts.every((n) => me > mask(n));
+      if (!ok) { bad.push(`${id}: ステージ${label}の「最も小さい」の向きが答えと合っていない（${q.answer}）`); break; }
+      if (!/最も小さい/.test(q.prompt)) { bad.push(`${id}: ステージ${label}の問いに「最も小さい」が無い（${q.prompt}）`); break; }
+      // 7 は「サブネットの」、8 は「サブネットマスク」に かかっていること
+      const phrase = wantSmallestMask ? "最も小さいサブネットマスク" : "最も小さいサブネットの";
+      if (!q.prompt.includes(phrase)) { bad.push(`${id}: 「${phrase}」になっていない（${q.prompt}）`); break; }
+    }
+  }
+}
+/* 仕上げのテストは、**8つの型を一通り出す**（15問）。
+   ここが抜けると「本番で聞かれる8つの形」と言っておきながら、出ない型が生まれる。
+   並び順が毎回同じでないことも見る（同じだと、問題を読まずに順番で覚えられる）。 */
+{
+  const { FINAL_KINDS: KINDS, finalOrder } = require("./gen.js");
+  const heads = new Set();
+  for (let r = 0; r < 200; r++) {
+    const o = finalOrder(15);
+    if (o.length !== 15) bad.push(`仕上げ: 15問にならない（${o.length}問）`);
+    const miss = KINDS.filter((k) => !o.includes(k));
+    if (miss.length) bad.push(`仕上げ: 出ない型がある（${miss.join(" ")}）`);
+    if (o.some((k) => !KINDS.includes(k))) bad.push("仕上げ: 知らない型が混ざっている");
+    heads.add(o.join(","));
+  }
+  if (heads.size < 100) bad.push(`仕上げ: 並び順がまざっていない（200回で ${heads.size} 通り）`);
+}
 const INPUTS = ["pow", "sum", "sub", "split", "pick", "stack", "mask", "final", "table"];
 for (const s of STATIONS) {
   if (!EXAMPLES[s.id]) bad.push(`${s.id}: やり方（見本）が無い`);
@@ -91,6 +132,12 @@ for (const s of STATIONS) {
     const shape = (x) => x.replace(/\d+/g, "#");
     if (shape(t.prompt) !== shape(q.prompt) && t.goal === q.goal) bad.push(`${s.id}: 練習とテストで問いが違う`);
     if (/盤/.test(t.prompt)) bad.push(`${s.id}: 問いに「盤」と書いてある（${t.prompt}）`);
+    /* **聞いている言葉が、宙に浮いていないか。**
+       「…を使います。どれですか。」のように、句点のあとに問いの言葉だけが残ると、
+       何を聞かれているのか読み返さないと分からない。何を答えるのかは同じ文の中で言う。 */
+    if (/。\s*(どれ|どこ|いくつ|なに|何)/.test(q.prompt)) {
+      bad.push(`${s.id}: 問いの言葉が宙に浮いている（${q.prompt}）`);
+    }
     // 画面に出る言葉に、初めての人に通じない言い方を混ぜない
     // 「桁の重み」だけで使わない。**8つ並べた表そのものの名前が「桁の重み表」。**
     for (const w of ["ビット目", "基準", "かたまり"]) {
