@@ -37,6 +37,10 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
     }
     const q = w.__q; n++;
     if (!q || !q.steps5) { ng++; console.log("練習の最後の2問が手順つきになっていない"); continue; }
+    // **問題が画面の最上部に出ているか。**手順だけあって問題が無いと、何を解くのか分からない
+    const gv = $(".given");
+    console.log(gv ? "  最上部に問題が出ている: " + gv.textContent.replace(/\s+/g, " ").slice(0, 44)
+      : "  ✗ 最上部に問題が出ていない");
     let bad = "";
     for (const round of q.steps5) {
       // 正解の手順を選ぶ

@@ -1,8 +1,9 @@
-// 10ステージぶん、チュートリアルの盤が実際に描けるか（例外が出ないか）だけを見る
+// 10ステージぶん、チュートリアルの盤が描けるか（例外が出ないか）と、
+// **段の骨組みが10ステージで同じか**を見る
 const path=require("path"),fs=require("fs");
 const R=path.join(__dirname, "..");
 const {JSDOM}=require(path.join(R,".check/node_modules/jsdom"));
-const {STATIONS}=require(path.join(R,"gen.js"));
+const {STATIONS,FIGURE}=require(path.join(R,"gen.js"));
 const B=["vendor/react.production.min.js","vendor/react-dom.production.min.js","gen.js","app.js"].map(f=>fs.readFileSync(path.join(R,f),"utf8")).join("\n");
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 (async()=>{
@@ -21,13 +22,35 @@ const wait=ms=>new Promise(r=>setTimeout(r,ms));
     click(tile.querySelector(".t-h")); await wait(60);
     click(tile.querySelector(".go")); await wait(120);
     const okSheet=!!$(".sheet-p")&&!!$(".box");
+
+    /* ── 骨組みがステージごとにずれていないか ────────────────────
+       前は「灰の箱」「黄のベタ塗り」「名札なしの文章」が混ざり、
+       ステージによって段の数も順番も違っていた。**そこを機械で止める。** */
+    const why=[];
+    const secs=$$(".sec").map(e=>e.textContent);
+    const want=FIGURE[st.id]
+      ? ["前のステージから","図で見ると","見本","やってみる"]
+      : ["前のステージから","見本","やってみる"];
+    if (secs.join(">")!==want.join(">")) why.push(`段の並びが違う（${secs.join(">")}）`);
+    // 目立つ帯（赤い縦線）は1画面に1つだけ
+    if ($$(".way").length!==1) why.push(`解き方の帯が ${$$(".way").length} 個`);
+    // 名札の下の断り書きは、向きが2つあるステージでも1回だけ。
+    // （.sec-w の直下が段の断り書き。①② の見出しは .tut の中なので混ざらない）
+    const notes=$$(".sec-w > .sec-n").length;
+    if (notes!==1) why.push(`段の断り書きが ${notes} 回`);
+    // 作り替える前の見た目が残っていないか
+    for (const c of ["link1","how","tut-h","extbl"]) {
+      if ($$("."+c).length) why.push(`古い見た目 .${c} が残っている`);
+    }
+    // 黄のベタ塗りは、形が変わる予告のときだけ。説明の1枚には出さない
+    if ($$(".testnote").length) why.push("説明の1枚に黄色いベタ塗りが出ている");
+
     // 練習（盤）にも入ってみる
     click($$(".gotest button")[0]); await wait(150);
     const okPlay=!!$(".play")&&!!$(".box");
-    // テストにも
-    const d2=$$(".dopt").length;
-    console.log(`${st.no} ${st.name}  説明:${okSheet?"OK":"NG"} 練習:${okPlay?"OK":"NG"} 例外:${errs.length}`);
-    if(!okSheet||!okPlay||errs.length) ng++;
+    console.log(`${st.no} ${st.name}  説明:${okSheet?"OK":"NG"} 骨組み:${why.length?"NG":"OK"} 練習:${okPlay?"OK":"NG"} 例外:${errs.length}`);
+    for (const m of why) console.log("      ↳ "+m);
+    if(!okSheet||!okPlay||errs.length||why.length) ng++;
   }
-  console.log(ng? `✗ ${ng} ステージで問題` : "✓ 10ステージとも、説明と練習の盤が描けた");
+  console.log(ng? `✗ ${ng} ステージで問題` : "✓ 10ステージとも、盤が描けて、骨組みもそろっている");
 })();

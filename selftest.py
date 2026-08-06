@@ -32,7 +32,7 @@ def verify(q):
     s = q["station"]
     counts[s] += 1
 
-    if q["input"] not in ("pow", "sum", "sub", "split", "pick", "stack", "mask", "final"):
+    if q["input"] not in ("pow", "sum", "sub", "split", "pick", "stack", "mask", "final", "table"):
         fails.append(f'{s}  知らない盤: {q["input"]}')
     if len(q.get("steps", [])) < 2:
         fails.append(f"{s}  手順が足りない")
@@ -84,6 +84,8 @@ def verify(q):
             fails.append(f"S9  材料と盤が食い違う: {q['given']} / {q['board']}")
         expect(q, ".".join(str(255 - int(x)) for x in str(m).split(".")))
 
+    elif q["input"] == "table":                     # 桁の重み表をうめる
+        expect(q, "128 64 32 16 8 4 2 1")
     elif s == "SF":                                 # 仕上げ（本番の形）
         k = q["goal"]
         if k == "mask":
