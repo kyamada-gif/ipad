@@ -1550,7 +1550,7 @@ function TestBoard({
     className: "box"
   }, q.input === "split" && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sub"
-  }, "\u30E1\u30E2\uFF08\u4F7F\u3063\u3066\u3082\u4F7F\u308F\u306A\u304F\u3066\u3082\u3088\u3044\u3002\u63A1\u70B9\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("div", {
+  }, "\u899A\u3048\u305F\u8868\uFF08\u898B\u306A\u304C\u3089\u8A08\u7B97\u3057\u307E\u3059\uFF09"), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
@@ -1564,26 +1564,24 @@ function TestBoard({
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
   }), /*#__PURE__*/React.createElement("div", {
-    className: "row8 tight"
-  }, W8.map(w => /*#__PURE__*/React.createElement("button", {
+    className: "sp-row"
+  }, W8.map(w => /*#__PURE__*/React.createElement("span", {
     key: w,
-    className: "cell bare" + ((st.memo || 0) & w ? " on" : ""),
-    onClick: () => !locked && set({
-      memo: (st.memo || 0) ^ w
-    })
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "c-v"
-  }, (st.memo || 0) & w ? 1 : 0))))), !!st.memo && /*#__PURE__*/React.createElement("div", {
-    className: "out"
-  }, /*#__PURE__*/React.createElement("span", {
-    className: "o-n"
-  }, "\u3053\u306E8\u3064 \uFF1D ", /*#__PURE__*/React.createElement("b", null, W8.reduce((a, w) => a + (st.memo & w ? w : 0), 0)))), /*#__PURE__*/React.createElement("textarea", {
+    className: "sp-c fixed pv"
+  }, w)))), /*#__PURE__*/React.createElement("div", {
+    className: "sub"
+  }, "\u30E1\u30E2\uFF08\u4F7F\u3063\u3066\u3082\u4F7F\u308F\u306A\u304F\u3066\u3082\u3088\u3044\u3002\u63A1\u70B9\u3057\u307E\u305B\u3093\uFF09"), /*#__PURE__*/React.createElement("textarea", {
     className: "scratch",
     rows: "3",
     placeholder: "\u3053\u3053\u306B\u66F8\u3051\u307E\u3059",
     value: st.note || "",
     onChange: e => !locked && set({
       note: e.target.value
+    })
+  }), /*#__PURE__*/React.createElement(Calc, {
+    value: st.calc,
+    onChange: v => !locked && set({
+      calc: v
     })
   })), /*#__PURE__*/React.createElement("div", {
     className: "choices"
@@ -2002,6 +2000,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.blank{border-style:dashed;background:none}
 /* 「7乗」は3文字。マスからはみ出さないように小さく＋はみ出しを切る */
 .sp-c.pw{font-size:11px;min-width:0;overflow:hidden}
+.sp-c.pv{font-size:13px;min-width:0;overflow:hidden}
 .sp-row,.row8{min-width:0}
 .sp-row>*,.row8>*{min-width:0}
 .sp-c.done{color:#79c0ff}

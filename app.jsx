@@ -1238,8 +1238,10 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
           **重みは書かない**（思い出す仕事を機械が先にやってしまう） */}
       {q.input === "split" && (
         <>
-          <div className="sub">メモ（使っても使わなくてもよい。採点しません）</div>
-          {/* 練習と同じ形。2の◯乗は押すところの上。重み（128 64 …）は出さない */}
+          {/* 本番までに覚えるのは、2の◯乗とその答えの対応だけ。
+              本番の会場では、これを思い出して、渡されるボードに書きながら計算する。
+              だから表は**見えるが押せない**（平ら）。押して答えが出る道具にはしない。 */}
+          <div className="sub">覚えた表（見ながら計算します）</div>
           <div className="split">
             <div className="sp-lab">2の</div>
             <div className="sp-row">
@@ -1248,21 +1250,16 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
           </div>
           <div className="split">
             <div className="sp-lab" />
-            <div className="row8 tight">
-              {W8.map((w) => (
-                <button key={w} className={"cell bare" + ((st.memo || 0) & w ? " on" : "")}
-                  onClick={() => !locked && set({ memo: (st.memo || 0) ^ w })}>
-                  <span className="c-v">{(st.memo || 0) & w ? 1 : 0}</span>
-                </button>
-              ))}
+            <div className="sp-row">
+              {W8.map((w) => <span key={w} className="sp-c fixed pv">{w}</span>)}
             </div>
           </div>
-          {!!st.memo && (
-            <div className="out"><span className="o-n">この8つ ＝ <b>{W8.reduce((a, w) => a + (st.memo & w ? w : 0), 0)}</b></span></div>
-          )}
           {/* 本番の会場で渡されるボードの代わり。何を書いてもよい */}
+          <div className="sub">メモ（使っても使わなくてもよい。採点しません）</div>
           <textarea className="scratch" rows="3" placeholder="ここに書けます"
             value={st.note || ""} onChange={(e) => !locked && set({ note: e.target.value })} />
+          {/* 足し引きの答えを出すのは機械。どれを足すかを決めるのは人 */}
+          <Calc value={st.calc} onChange={(v) => !locked && set({ calc: v })} />
         </>
       )}
       <div className="choices">
@@ -1278,7 +1275,7 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
           </button>
         ))}
       </div>
-      {/* 選ぶだけの回に電卓は要らない。使わない道具を置くと、押すものが増えて迷う */}
+      {/* 電卓を出すのは、足し引きが要る回だけ。使わない道具を置くと、押すものが増えて迷う */}
       <button className="next" onClick={() => onSubmit(st.pick)} disabled={locked || !st.pick}>これで決定</button>
     </div>
   );
@@ -1614,6 +1611,7 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.blank{border-style:dashed;background:none}
 /* 「7乗」は3文字。マスからはみ出さないように小さく＋はみ出しを切る */
 .sp-c.pw{font-size:11px;min-width:0;overflow:hidden}
+.sp-c.pv{font-size:13px;min-width:0;overflow:hidden}
 .sp-row,.row8{min-width:0}
 .sp-row>*,.row8>*{min-width:0}
 .sp-c.done{color:#79c0ff}
