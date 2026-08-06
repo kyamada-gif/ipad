@@ -216,15 +216,7 @@ function wrongsOf(q) {
     }
     return q.goal === "toValue" ? near.map((x) => String(Math.pow(2, x))) : near.map(String);
   }
-  if (q.station === "S9") {
-    const near = [];
-    for (const d of [1, -1, 2, -2, 8, -8]) {
-      const n = q.board.len + d;
-      if (n >= 8 && n <= 30) { const w = maskStr(n).split(".").map((v) => 255 - Number(v)).join("."); if (!near.includes(w)) near.push(w); }
-    }
-    near.push(maskStr(q.board.len));   // マスクとの取りちがえ
-    return near;
-  }
+  if (q.station === "SF") return q.wrongs || [];
   if (q.station === "S8") {
     const len = q.board.len;
     // よくある間違い：1個ずれる／8の区切りを1つ数えまちがえる
@@ -398,26 +390,133 @@ GEN.S8 = (ease) => {
   };
 };
 
-/* ── ワイルドカードマスク（別枠）─────────────────────────
-   255.255.255.255 から引くだけ。使う場面が違うので、ステージも分けてある。 */
-GEN.S9 = (ease) => {
-  const len = commonLen(16, 30, ease, false);
-  const m = maskStr(len).split(".").map(Number);
-  const wc = m.map((v) => 255 - v).join(".");
-  return {
-    station: "S9",
-    given: [{ k: "サブネットマスク", v: maskStr(len) }],
-    prompt: "ワイルドカードマスクは？",
-    input: "wild", goal: "wild",
-    board: { len },
-    answer: wc,
+
+/* ── 10ステージ 仕上げの演習 ────────────────────────────────
+   ここまでの全部を、**本番の問い方**で1問ずつ。
+   型は、想定問題集（対策問題1〜4／全1650問）に実際に出ていた形から採った。
+   新しく覚えることは足さない。**組み合わせるだけ。**
+   盤は出さない。道具は本番と同じ（覚えた表・メモ・足し引き）だけ。 */
+const FINAL_KINDS = ["mask", "binmask", "net", "bc", "gw", "same", "sum", "hosts"];
+
+/** 区切りのあるアドレスを1つ。net と bc の間に、使えるアドレスが2つ以上ある長さにする。 */
+function finalIp(ease) {
+  const len = commonLen(17, 30, ease, true);
+  return { ip: randomIp(), len };
+}
+
+function finalOf(kind, ease) {
+  const mk = (o) => Object.assign({ station: "SF", input: "final", goal: kind }, o);
+
+  if (kind === "mask") {
+    const len = commonLen(8, 30, ease, false);
+    const ip = randomIp();
+    return mk({
+      given: [{ k: "IPアドレス", v: `${ip}/${len}` }],
+      prompt: "サブネットマスクはどれですか。",
+      answer: maskStr(len),
+      wrongs: [len + 1, len - 1, len + 4, len - 4, len + 8, len - 8]
+        .filter((n) => n >= 1 && n <= 32).map(maskStr),
+      steps: [
+        { t: `/${len} を 8 で区切る`, v: `${Math.floor(len / 8)} 個そろって、あまり ${len % 8}` },
+        { t: "答え", v: maskStr(len) },
+      ],
+      tip: "ステージ4と同じ。8個そろったオクテットは 255。",
+    });
+  }
+
+  if (kind === "binmask") {
+    const len = commonLen(8, 30, ease, false);
+    const bin = maskStr(len).split(".").map((x) => bin8(Number(x))).join(".");
+    return mk({
+      given: [{ k: "サブネットマスク（2進数）", v: bin }],
+      prompt: "同じものを、プレフィックス長で書くとどれですか。",
+      answer: `/${len}`,
+      wrongs: [len + 1, len - 1, len + 2, len - 2].filter((n) => n >= 1 && n <= 32).map((n) => `/${n}`),
+      steps: [
+        { t: "1 の数をかぞえる", v: `${len} 個` },
+        { t: "答え", v: `/${len}` },
+      ],
+      tip: "プレフィックス長は、左から並んだ 1 の数そのもの。",
+    });
+  }
+
+  if (kind === "net" || kind === "bc" || kind === "gw") {
+    const { ip, len } = finalIp(ease);
+    const n = netInt(ipToInt(ip), len), b = bcInt(ipToInt(ip), len);
+    const ans = kind === "net" ? intToIp(n) : kind === "bc" ? intToIp(b) : intToIp(n + 1);
+    const all = [intToIp(n), intToIp(b), intToIp(n + 1), intToIp(b - 1), ip];
+    return mk({
+      given: [{ k: "IPアドレス", v: `${ip}/${len}` }, { k: "サブネットマスク", v: maskStr(len) }],
+      prompt: kind === "net" ? "このアドレスが入っているサブネットの、ネットワークアドレスはどれですか。"
+        : kind === "bc" ? "このアドレスが入っているサブネットの、ブロードキャストアドレスはどれですか。"
+          : "デフォルトゲートウェイに、サブネットの最初に使えるアドレスを使います。どれですか。",
+      answer: ans,
+      wrongs: all.filter((x) => x !== ans),
+      steps: [
+        { t: "線から右をぜんぶ 0", v: intToIp(n) },
+        { t: "線から右をぜんぶ 1", v: intToIp(b) },
+        { t: "使えるのは、その1つ内側から", v: `${intToIp(n + 1)} 〜 ${intToIp(b - 1)}` },
+        { t: "答え", v: ans },
+      ],
+      tip: null,
+    });
+  }
+
+  if (kind === "same") {
+    // 2台が別々のサブネットに置かれている。**両方を1つのサブネットに入れる**マスクを選ぶ
+    const base = `192.168.${ri(0, 255)}.`;
+    let a1, a2, L;
+    do {
+      a1 = base + ri(1, 254); a2 = base + ri(1, 254);
+      L = a1 === a2 ? 0 : Math.clz32((ipToInt(a1) ^ ipToInt(a2)) >>> 0);
+    } while (L < 24 || L > 27);   // 外れの選択肢を4つ作れる幅を残す
+    const now = Math.min(30, L + ri(1, 3));
+    return mk({
+      given: [{ k: "1台目", v: `${a1}/${now}` }, { k: "2台目", v: `${a2}/${now}` }],
+      prompt: "この2台を、同じサブネットにして通信させます。両方に使うサブネットマスクはどれですか。",
+      answer: maskStr(L),
+      wrongs: [L + 1, L + 2, L + 3, L + 4].filter((n) => n <= 30).map(maskStr),
+      steps: [
+        { t: `いまの /${now} だと`, v: `${intToIp(netInt(ipToInt(a1), now))} と ${intToIp(netInt(ipToInt(a2), now))}（別のサブネット）` },
+        { t: `/${L} なら`, v: `どちらも ${intToIp(netInt(ipToInt(a1), L))}（同じサブネット）` },
+        { t: "答え", v: maskStr(L) },
+      ],
+      tip: "2つのネットワークアドレスが同じになるまで、/ の数を減らす。",
+    });
+  }
+
+  if (kind === "sum") {
+    const q7 = GEN.S7(ease);
+    return mk({
+      given: q7.given,
+      prompt: `この${q7.given.length}つを1つにまとめると、どのアドレスになりますか。`,
+      answer: q7.answer,
+      wrongs: wrongsOf(q7),
+      steps: q7.steps,
+      tip: q7.tip,
+    });
+  }
+
+  // hosts … マスクから台数。ステージ7の逆向き
+  const len = commonLen(24, 30, ease, false);
+  const h = 32 - len;
+  const num = (k) => `${Math.pow(2, k) - 2}台`;
+  return mk({
+    given: [{ k: "サブネットマスク", v: `${maskStr(len)}（/${len}）` }],
+    prompt: "このサブネットに、機器は何台つなげますか。",
+    answer: num(h),
+    wrongs: [`${Math.pow(2, h)}台`, num(h + 1), num(h - 1), `${Math.pow(2, h) - 1}台`]
+      .filter((x) => parseInt(x, 10) > 0),
     steps: [
-      { t: "255 から、それぞれ引く", v: `${maskStr(len)} → ${wc}` },
-      { t: "答え", v: wc },
+      { t: "ホスト部の桁数", v: `32 − ${len} ＝ ${h} 桁` },
+      { t: "かたまりの大きさ", v: `2の${h}乗 ＝ ${Math.pow(2, h)}` },
+      { t: "両はしの2つは使えない", v: `${Math.pow(2, h)} − 2 ＝ ${Math.pow(2, h) - 2}台` },
     ],
-    tip: "255.255.255.255 から引いた形。0 のところが「見るところ」。",
-  };
-};
+    tip: "ステージ7の逆向き。台数から探すか、マスクから数えるかの違いだけ。",
+  });
+}
+
+GEN.SF = (ease) => finalOf(pick(FINAL_KINDS), ease);
 
 /* ── 3ステージ 先頭と末尾（ネットワークアドレスとブロードキャストアドレス） ──
    人がやるのは2つだけ。
@@ -552,7 +651,7 @@ GEN.S7 = (ease) => {
     board: { nets, oc, outLen },
     answer: `${intToIp(base)}/${outLen}`,
     steps: [
-      { t: "4つを見くらべて、違っているところ", v: `${oc + 1}つ目` },
+      { t: "4つを見くらべて、違っているところ", v: `第${oc + 1}オクテット` },
       { t: "そこを縦に見て、4つとも同じところまで", v: `上から ${outLen - oc * 8} 桁ぶん同じ` },
       { t: "線から左が、まとめたアドレス", v: `${intToIp(base)}/${outLen}` },
     ],
@@ -577,8 +676,8 @@ const STATIONS = [
   { id: "S5", name: "台数 → サブネットマスク", ex: "24台 → /27", need: ["S8"] },
   { id: "S6", name: "サブネット数 → サブネットマスク", ex: "クラスB で10個 → /20", need: ["S5"] },
   { id: "S7", name: "まとめる（集約）", ex: "…168.0/24 〜 …171.0/24 → …168.0/22", need: ["S3"] },
-  // 別枠。ACL と OSPF で使う。サブネット計算の流れには混ぜない
-  { id: "S9", name: "ワイルドカードマスク", ex: "255.255.255.192 → 0.0.0.63", need: ["S8"] },
+  // 最後は、ここまでの全部を本番の問い方で。新しく覚えることは足さない
+  { id: "SF", name: "仕上げの演習", ex: "本番の形で1問ずつ", need: ["S7"] },
 ];
 STATIONS.forEach((s, i) => { s.no = i + 1; });
 
@@ -595,7 +694,7 @@ const HOW = {
   S5: "プレフィックス長ごとの「使えるホスト数」の階段を丸暗記します。どれも 2の◯乗 − 2 の形です。",
   S6: "1桁のばすごとに、サブネットの数は2倍になります。出発点はクラスで決まります。A は /8、B は /16、C は /24。",
   S7: "2つなら / を 1 減らす、4つなら 2、8つなら 3。確かめたいときは、2進数を縦に並べます。",
-  S9: "ワイルドカードマスクは、サブネットマスクを 255 から引いた形です。ACL と OSPF の設定で使います。",
+  SF: "ここまでに覚えたことだけで解けます。道具は本番と同じで、覚えた表とメモと足し引きだけです。",
 };
 
 /** 説明の1枚のいちばん上。**前のステージで覚えた何を、ここでそのまま使うのか。** */
@@ -608,7 +707,7 @@ const LINK = {
   S5: "台数に 2 を足すのは、前のステージの両はし（ネットワークアドレスとブロードキャストアドレス）のぶんです。",
   S6: "「必要な数が入る、いちばん小さい 2の◯乗」を探すのは前のステージと同じです。こんどは 2 を足しません。",
   S7: "前のステージでは、のばすたびにサブネットが2倍に増えました。まとめるのはその逆です。",
-  S9: "ステージ4で覚えた8つの数に、相方を1つずつ付けます。相方は 255 − その数です。",
+  SF: "新しいやり方は出てきません。ステージ4〜9でやったことを、本番の問い方に置きかえただけです。",
 };
 
 /** 結果の画面で、はじめてできたときだけ1行。**次にどう生きるか。** */
@@ -621,7 +720,8 @@ const NEXT = {
   S4: "つぎのステージに出てくる「＋2」の正体はこれです。両はしの2つが使えないので、台数に 2 を足します。",
   S5: "つぎのステージも同じ動きです。必要な数が入る 2の◯乗 を探します。ただしサブネットの数には 2 を足しません。",
   S6: "つぎのステージは、これの逆向きです。まとめると / の数が減ります。",
-  S7: "サブネットの計算はここで一周です。ステージ10は、設定で使う別の道具です。",
+  S7: "サブネットの計算はここで一周です。つぎのステージで、本番の問い方に慣れます。",
+  SF: "これで、IPアドレスの計算はひと通りです。あとは、速く正しく出せるまで繰り返すだけです。",
 };
 
 /** ステージ5だけ、表の下に例を1行。ここが「何の役に立つのか」がいちばん見えにくい。 */
@@ -630,6 +730,17 @@ const EXLINE = {};
 
 /* 教材に載っている見本。数字は教材のまま。 */
 const EXAMPLES = {
+  // 仕上げに出る8つの型。**想定問題集に実際に出ていた問い方**をそのまま並べた
+  SF: { title: "本番で聞かれる8つの形", rows: [
+    ["サブネットマスクはどれか", "192.168.1.0/24 → 255.255.255.0"],
+    ["プレフィックス長でいくつか", "11111111.11111111.11111111.11111000 → /29"],
+    ["ネットワークアドレスはどれか", "192.168.10.100/27 → 192.168.10.96"],
+    ["ブロードキャストアドレスはどれか", "192.168.10.100/27 → 192.168.10.127"],
+    ["最初に使えるアドレスはどれか", "192.168.10.100/27 → 192.168.10.97"],
+    ["同じサブネットにするマスクはどれか", "…25.128/25 と …25.100/25 → 255.255.255.0"],
+    ["4つをまとめるとどれか", "172.16.168.0/24 〜 171.0/24 → 172.16.168.0/22"],
+    ["何台つなげるか", "255.255.255.224 → 30台"],
+  ] },
   S0: { title: "2 を何回かけた数か", rows: [
     ["2の0乗", "1"],
     ["2の1乗", "2"],
@@ -680,12 +791,8 @@ const EXAMPLES = {
     ["255 が3つ", "255.255.255."],
     ["あまり4個は上の桁から", "11110000 = 240"],
     ["答え", "255.255.255.240"]] },
-  S9: { title: "255.255.255.192 のワイルドカードマスク", rows: [
-    ["255 から引く", "255 − 255 = 0"],
-    ["", "255 − 192 = 63"],
-    ["答え", "0.0.0.63"]] },
   S7: { title: "172.16.168.0/24 〜 172.16.171.0/24", rows: [
-    ["3つ目の数を縦に", "168 = 101010|00"],
+    ["第3オクテットを縦に", "168 = 101010|00"],
     ["", "169 = 101010|01"],
     ["", "170 = 101010|10"],
     ["", "171 = 101010|11"],
@@ -711,8 +818,9 @@ function makeQuestion(stationId, ease, test, goal, steps) {
     for (const x of shuffle(w)) { if (out.length >= 4) break; if (!out.includes(x)) out.push(x); }
     q.choices = shuffle(out);
   }
-  if (test) {
-    q.test = true;
+  // 仕上げは、練習でもテストでも本番の形（4択）
+  if (q.input === "final" || test) {
+    if (test) q.test = true;
     // プレフィックス長↔サブネットマスクは、自分で書く（選ぶと消去法で当たる）
     if (stationId === "S8") return q;
     const w = wrongsOf(q).filter((x) => x && x !== q.answer);
@@ -726,6 +834,6 @@ function makeQuestion(stationId, ease, test, goal, steps) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { STATIONS, EXAMPLES, HOW, LINK, NEXT, EXLINE, GEN, addrWith, pairOut, restOnes, stepRounds, makeQuestion, wrongsOf, splitOut, pickOut, stackOut, maskBoardOut,
+  module.exports = { STATIONS, EXAMPLES, FINAL_KINDS, finalOf, HOW, LINK, NEXT, EXLINE, GEN, addrWith, pairOut, restOnes, stepRounds, makeQuestion, wrongsOf, splitOut, pickOut, stackOut, maskBoardOut,
     ipToInt, intToIp, maskStr, netInt, bcInt, bin8, cutOct, cutBit, breakdown };
 }

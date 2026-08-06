@@ -210,14 +210,13 @@ function Play({ plan, onDone, onQuit }) {
           枠の色が変わり、外したときはカードごと揺れる。画面の外に出ないよう、
           押した直後にここまで自動で送る。 */}
       <div className={"card" + (judged === null ? "" : judged ? " ok" : " ng")} ref={why}>
-        {plan.test || q.steps5 ? <TestBoard {...board} />
+        {plan.test || q.steps5 || q.input === "final" ? <TestBoard {...board} />
           : q.input === "pow" ? <PowBoard {...board} />
           : q.input === "mask" ? <MaskBoard {...board} />
           : q.input === "sum" ? <SumBoard {...board} />
           : q.input === "sub" ? <SubBoard {...board} />
           : q.input === "split" ? <SplitBoard {...board} />
           : q.input === "pick" ? <PickBoard {...board} />
-          : q.input === "wild" ? <WildBoard {...board} />
           : <StackBoard {...board} />}
 
         {judged !== null && (
@@ -289,13 +288,13 @@ function Tutorial({ station, goal, lead, onSolved }) {
         ))}
       </div>
       <div className={"card" + (judged === null ? "" : judged ? " ok" : " ng")} ref={mark}>
-        {q.input === "pow" ? <PowBoard {...board} />
+        {q.input === "final" ? <TestBoard {...board} />
+          : q.input === "pow" ? <PowBoard {...board} />
           : q.input === "mask" ? <MaskBoard {...board} />
           : q.input === "sum" ? <SumBoard {...board} />
           : q.input === "sub" ? <SubBoard {...board} />
           : q.input === "split" ? <SplitBoard {...board} />
           : q.input === "pick" ? <PickBoard {...board} />
-          : q.input === "wild" ? <WildBoard {...board} />
           : <StackBoard {...board} />}
         {judged !== null && (
           <div className="verdict">
@@ -428,35 +427,6 @@ function WeightTable({ blank }) {
           <span key={n} className={blank ? "sp-c blank" : "sp-c fixed big2"}>{blank ? "" : Math.pow(2, n)}</span>
         ))}
       </div>
-    </div>
-  );
-}
-
-/* ── 盤 ワイルドカードマスク ────────────────────────────
-   255 から引くだけ。4つの数を、左から順に自分で出す。 */
-function WildBoard({ q, value, onChange, locked, onSubmit }) {
-  const m = maskStr(q.board.len).split(".").map(Number);
-  const got = value || [null, null, null, null];
-  const set = (i, v) => { if (locked) return; const n = got.slice(); n[i] = v; onChange(n); };
-  const done = got.every((v) => v != null);
-  return (
-    <div className="box">
-      <div className={"lead " + (done ? "past" : "now")}>① <b>255 から引く</b>。左から順に</div>
-      {m.map((v, i) => (
-        <div key={i} className="split">
-          <div className="sp-lab">255 − {v}</div>
-          <div className="sp-row w9">
-            {[0, 1, 3, 7, 15, 31, 63, 127, 255].map((x) => (
-              <button key={x} className={"sp-c" + (got[i] === x ? " on" : "")}
-                onClick={() => set(i, x)}>{x}</button>
-            ))}
-          </div>
-        </div>
-      ))}
-      <div className="derive">
-        <div className="d-r ans"><span>ワイルドカードマスク</span><b>{done ? got.join(".") : "—"}</b></div>
-      </div>
-      <button className="next" onClick={() => onSubmit(got.join("."))} disabled={locked || !done}>これで決定</button>
     </div>
   );
 }
@@ -651,12 +621,16 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
             <div className="sp-lab">重み</div>
             <div className="sp-row w">{W8.map((w) => <span key={w} className="sp-w">{w}</span>)}</div>
           </div>
-          {/* ステージ3と同じ形で、引いていくようすを見せる（暗算をさせない） */}
-          <div className="out">
-            <span className="o-x">
-              {mask[oct]}{W8.filter((w, i) => bs[i]).map((w) => ` − ${w}`).join("")} ＝ 0
-            </span>
-          </div>
+          {/* ステージ3と同じ形で、足していくようすを見せる（暗算をさせない）。
+              **ここは MaskBoard。**押した重みを足すと、そのオクテットの数になる。
+              1つも押していないうちは、式にならないので出さない */}
+          {!!bits && (
+            <div className="out">
+              <span className="o-x">
+                {W8.filter((w) => bits & w).join(" ＋ ")} ＝ {bits}
+              </span>
+            </div>
+          )}
         </>
       )}
 
@@ -727,7 +701,7 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
           </React.Fragment>
         ))}
       </div>
-      {!givenMask && <div className="sub">/{len} → {maskStr(len)}（{byId("S8").no}つ目のステージでやったところ）</div>}
+      {!givenMask && <div className="sub">/{len} → {maskStr(len)}（ステージ{byId("S8").no} でやったところ）</div>}
 
       {oct != null && (
         <>
@@ -847,6 +821,42 @@ function SplitBoard({ q, value, onChange, locked, onSubmit }) {
    盤を右（小さい方）から見て、必要な数以上になる最初の重みを押す。
    8桁で足りないときのために、上に延長した段を出してある（教材の「表を延長する」）。 */
 const W16 = [32768, 16384, 8192, 4096, 2048, 1024, 512, 256];
+/* ── 桁数を、サブネットマスクの形にして見せる ────────────────────
+   「ホスト部 5桁」まで出せても、**それが第4オクテットの話なのか第3オクテットの話なのか**が
+   見えないと 255.255.255.224 に化けない。ここだけを絵にする。
+   破線＝ホスト部（機器のぶん）。空きは破線、という盤ぜんぶの約束と同じ。 */
+function MaskFrom({ len }) {
+  // /32 は「第4オクテットの8桁ぜんぶ」。cutOct のままだと 5つ目のオクテットを指してしまう
+  const oc = Math.min(3, cutOct(len)), cb = len - oc * 8;
+  const parts = maskStr(len).split(".");
+  const on = W8.slice(0, cb);
+  return (
+    <>
+      <div className="point">うしろから {32 - len} 桁ぶんが、機器のぶん（ホスト部）。線は <b>第{oc + 1}オクテット</b> に入る</div>
+      <div className="split">
+        <div className="sp-head">第{oc + 1}オクテット</div>
+        <div className="sp-lab" />
+        <div className="sp-row">
+          {W8.map((x, j) => (
+            <span key={x} className={j < cb ? "sp-c fixed" : "sp-c blank"}>{j < cb ? 1 : 0}</span>
+          ))}
+        </div>
+      </div>
+      <div className="out">
+        <span className="o-n">第{oc + 1}オクテット ＝ {on.length ? on.join(" ＋ ") + " ＝ " : ""}<b>{parts[oc]}</b></span>
+      </div>
+      <div className="dots">
+        {parts.map((v, i) => (
+          <React.Fragment key={i}>
+            {i > 0 && <span className="dot">.</span>}
+            <span className={"num" + (i === oc ? " on" : "")}>{v}</span>
+          </React.Fragment>
+        ))}
+      </div>
+    </>
+  );
+}
+
 function PickBoard({ q, value, onChange, locked, onSubmit }) {
   const w = value;
   const d = w == null ? null : pickOut(w, q.goal, q.base);   // 計算は gen.js に任せる
@@ -860,30 +870,63 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
   );
   return (
     <div className="box">
-      {/* 与えられた数の読み替えを、いちばん上に平らな1行で（ステージ4と同じ形） */}
-      {q.goal === "host"
-        ? <div className="sub">{q.need}台 ＋2（ネットワークアドレスとブロードキャストアドレスのぶん）＝ <b>{q.want}</b></div>
-        : <div className="sub">クラス{q.cls}（/{q.base} から）／ 必要なサブネット数 <b>{q.want}</b></div>}
-      {/* やり方（右から順に見て…）ではなく、めざす形を1行だけ。
-          「入るいちばん小さい箱」は、説明しなくても分かる */}
-      <div className={"lead " + (w != null ? "past" : "now")}><b>{q.want}</b> が入る、いちばん小さいところを押す</div>
-      {/* 縦に2段あるのが何なのかを、名札で言う。
-          台数の段は 128〜1 がアドレスの4つ目、256〜32768 が3つ目にあたる。
-          サブネットの数の段は場所ではなく「いくつ作れるか」なので、言い方を変える */}
-      <div className="point">{q.goal === "host"
-        ? "下の段は、いつもの 128〜1 の表（アドレスの4つ目）。上の段は、そのひとつ左"
-        : "数が大きいほど、たくさん分けられる"}</div>
+      {/* なぜ ＋2 なのかを、押す前に言っておく。
+          ここを言わないと「2 を足す」が呪文になり、数字が変わると再現できない */}
+      {q.goal === "host" ? (
+        <>
+          <div className="point">
+            かたまりの中の、いちばん小さいアドレスは<b>ネットワークアドレス</b>、
+            いちばん大きいアドレスは<b>ブロードキャストアドレス</b>。
+            この2つには機器を置けない。
+            だから、機器に使えるのは <b>かたまりの数 − 2</b>。
+            さがすときは、ほしい台数に、その2つぶんを足しておく。
+            ひとつ前でやった<b>使えるアドレスの範囲</b>と、まったく同じ話。
+          </div>
+          <div className="lead past">① 使えない2つぶんを足す</div>
+          <div className="out"><span className="o-n">{q.need}台 ＋ 2 ＝ <b>{q.want}</b></span></div>
+          <div className={"lead " + (w != null ? "past" : "now")}>
+            ② <b>{q.want}</b> が入る、いちばん小さいかたまりを押す
+          </div>
+          {/* 上の段がどこから来たのかを言う。**覚えた表の続き**だと分かれば、覚えるものは増えない */}
+          <div className="point">いつもの 128〜1 の表を、左へのばしただけ（2倍ずつ増える）</div>
+        </>
+      ) : (
+        <>
+          <div className="sub">クラス{q.cls}（/{q.base} から）／ 必要なサブネット数 <b>{q.want}</b></div>
+          <div className={"lead " + (w != null ? "past" : "now")}>
+            <b>{q.want}</b> が入る、いちばん小さいところを押す
+          </div>
+          <div className="point">いつもの 128〜1 の表を、左へのばしただけ（2倍ずつ増える）。数が大きいほど、たくさん分けられる</div>
+        </>
+      )}
       <div className="split">
-        <div className="sp-lab">{q.goal === "host" ? "3つ目" : "上の段"}</div>
+        <div className="sp-head">第3オクテット</div>
+        <div className="sp-lab">2の</div>
+        <div className="sp-row">
+          {[15, 14, 13, 12, 11, 10, 9, 8].map((n) => <span key={n} className="sp-c fixed pw">{n}乗</span>)}
+        </div>
+        <div className="sp-lab" />
         <div className="row8 tight">{W16.map(cell)}</div>
-        <div className="sp-lab">{q.goal === "host" ? "4つ目" : "下の段"}</div>
+        <div className="sp-head">第4オクテット</div>
+        <div className="sp-lab">2の</div>
+        <div className="sp-row">
+          {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed pw">{n}乗</span>)}
+        </div>
+        <div className="sp-lab" />
         <div className="row8 tight">{W8.map(cell)}</div>
       </div>
       {w != null && (
         <div className="derive">
+          {q.goal === "host" && <div className="lead past">③ 押したかたまりで、何台つかえるかを見る</div>}
           <div className="d-r"><span>押したところ</span><b>{w}</b></div>
+          {q.goal === "host" && (
+            <div className="d-r"><span>機器に使える</span><b>{w} − 2 ＝ {Math.max(0, w - 2)}台</b></div>
+          )}
           <div className="d-r"><span>{q.goal === "host" ? "ホスト部" : "サブネットに使う"}</span><b>{bits} 桁</b></div>
           {q.goal === "subnet" && <div className="d-r"><span>/{q.base} から {bits} 桁 のばす</span><b>/{q.base} + {bits}</b></div>}
+          {/* ここが山場。**桁数のままでは、まだサブネットマスクにならない。**
+              うしろから何桁ぶんかを、どのオクテットのどこに線が入るかとして目で見せる */}
+          {q.goal === "host" && <MaskFrom len={d.len} />}
           <div className="d-r col ans"><span>答え</span><b>{out}</b></div>
         </div>
       )}
@@ -1233,35 +1276,17 @@ function TestBoard({ q, value, onChange, locked, onSubmit }) {
 
   return (
     <div className="box">
-      {/* 本番の試験会場では、書いて消せるボードが渡される。
-          「白い書く場所」は本番にもある補助なので、出しても本番より甘くならない。
-          **重みは書かない**（思い出す仕事を機械が先にやってしまう） */}
-      {q.input === "split" && (
-        <>
-          {/* 本番までに覚えるのは、2の◯乗とその答えの対応だけ。
-              本番の会場では、これを思い出して、渡されるボードに書きながら計算する。
-              だから表は**見えるが押せない**（平ら）。押して答えが出る道具にはしない。 */}
-          <div className="sub">覚えた表（見ながら計算します）</div>
-          <div className="split">
-            <div className="sp-lab">2の</div>
-            <div className="sp-row">
-              {[7, 6, 5, 4, 3, 2, 1, 0].map((n) => <span key={n} className="sp-c fixed pw">{n}乗</span>)}
-            </div>
-          </div>
-          <div className="split">
-            <div className="sp-lab" />
-            <div className="sp-row">
-              {W8.map((w) => <span key={w} className="sp-c fixed pv">{w}</span>)}
-            </div>
-          </div>
-          {/* 本番の会場で渡されるボードの代わり。何を書いてもよい */}
-          <div className="sub">メモ（使っても使わなくてもよい。採点しません）</div>
-          <textarea className="scratch" rows="3" placeholder="ここに書けます"
-            value={st.note || ""} onChange={(e) => !locked && set({ note: e.target.value })} />
-          {/* 足し引きの答えを出すのは機械。どれを足すかを決めるのは人 */}
-          <Calc value={st.calc} onChange={(v) => !locked && set({ calc: v })} />
-        </>
-      )}
+      {/* 4択の回は、どれも同じ道具立て。**本番の会場にあるものだけ**を置く。
+          ・覚えた表 … 本番までに覚えるのは 2の◯乗とその答えの対応だけ。見えるが押せない
+          ・メモ … 会場で渡される、書いて消せるボードの代わり。何を書いてもよい
+          ・電卓 … 足し引きの答えを出すのは機械、どれを足すかを決めるのは人
+          押せば答えが出る道具（0と1を押して入れる8マスなど）は、本番に無いので置かない */}
+      <div className="sub">覚えた表（見ながら計算します）</div>
+      <WeightTable />
+      <div className="sub">メモ（使っても使わなくてもよい。採点しません）</div>
+      <textarea className="scratch" rows="3" placeholder="ここに書けます"
+        value={st.note || ""} onChange={(e) => !locked && set({ note: e.target.value })} />
+      <Calc value={st.calc} onChange={(v) => !locked && set({ calc: v })} />
       <div className="choices">
         {(q.choices || [String(q.answer)]).map((c) => (
           <button key={c}
@@ -1353,8 +1378,11 @@ export default function App() {
       // テストは本番どおりの出方（前半はやさしく、後半は実際の割合で）
       // ステージ5の練習は、**最後の2問**を手順つきにする（盤で慣れてから、手順を自分で選ぶ）
       const steps = !test && station === "S3" && i >= n - 2;
-      let q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
-      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, test ? i / (n - 1) : 0, test, null, steps);
+      // 仕上げは、8つの型がひと通り出るように順ぐりで（同じ型ばかり出ると本番の練習にならない）
+      const kind = station === "SF" ? FINAL_KINDS[i % FINAL_KINDS.length] : null;
+      const ease = test ? i / (n - 1) : 0;
+      let q2 = makeQuestion(station, ease, test, kind, steps);
+      for (let k = 0; k < 40 && seen.has(keyOf(q2)); k++) q2 = makeQuestion(station, ease, test, kind, steps);
       seen.add(keyOf(q2));
       queue.push({ q: q2, scored: true });
     }
@@ -1611,7 +1639,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.blank{border-style:dashed;background:none}
 /* 「7乗」は3文字。マスからはみ出さないように小さく＋はみ出しを切る */
 .sp-c.pw{font-size:11px;min-width:0;overflow:hidden}
-.sp-c.pv{font-size:13px;min-width:0;overflow:hidden}
 .sp-row,.row8{min-width:0}
 .sp-row>*,.row8>*{min-width:0}
 .sp-c.done{color:#79c0ff}
@@ -1633,6 +1660,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.sp-c.zero{border-color:#58a6ff;color:#79c0ff}
 .sp-c.sp-lab i{display:block;font-style:normal;color:#8b949e;font-size:11px;margin-top:2px}
 .sp-lab{font-size:11px;color:#8b949e;text-align:right}
+/* 段の名前。名札の枠（44px）には「第4オクテット」が入らないので、段の上に置く */
+.sp-head{grid-column:1/-1;font-size:11px;color:#8b949e;margin-top:2px}
 .sp-row{display:grid;grid-template-columns:repeat(8,1fr);gap:3px}
 .sp-c{height:44px;border:1px solid #30363d;border-radius:7px;background:#161b22;
   font-size:15px;font-family:ui-monospace,Menlo,monospace;color:#484f58;padding:0}
@@ -1646,8 +1675,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .sp-c.edge::after,.st-c.edge::after{content:"";position:absolute;right:-3px;top:2px;bottom:2px;
   width:2px;background:#e3b341;border-radius:1px}
 .sp-row.w{grid-template-columns:repeat(8,1fr)}
-.sp-row.w9{grid-template-columns:repeat(9,1fr)}
-.sp-row.w9 .sp-c{font-size:11px}
 .sp-w{font-size:11px;color:#8b949e;text-align:center}
 
 .derive{background:#161b22;border:0;border-radius:12px;padding:4px 14px;margin-top:16px}

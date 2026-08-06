@@ -28,7 +28,7 @@ console.log("built app.js (" + code.length + " bytes)");
 // ── 見張り ──
 const { STATIONS, EXAMPLES, makeQuestion } = require("./gen.js");
 const bad = [];
-const INPUTS = ["pow", "sum", "sub", "split", "pick", "stack", "mask", "wild"];
+const INPUTS = ["pow", "sum", "sub", "split", "pick", "stack", "mask", "final"];
 for (const s of STATIONS) {
   if (!EXAMPLES[s.id]) bad.push(`${s.id}: やり方（見本）が無い`);
   for (const n of s.need) if (!STATIONS.some((x) => x.id === n)) bad.push(`${s.id}: 前提 ${n} が無い`);
@@ -38,7 +38,9 @@ for (const s of STATIONS) {
     if (!q.prompt || !q.given.length) bad.push(`${s.id}: 問題文か材料が無い`);
     // 練習とテストで問いが変わると、同じことを聞かれている気がしなくなる
     const t = makeQuestion(s.id, i / 199, true);
-    if (t.prompt !== q.prompt && t.goal === q.goal) bad.push(`${s.id}: 練習とテストで問いが違う`);
+    // 数だけは材料に合わせて変わってよい（「この2つ」「この4つ」）。**言い方**が変わるのを止める
+    const shape = (x) => x.replace(/\d+/g, "#");
+    if (shape(t.prompt) !== shape(q.prompt) && t.goal === q.goal) bad.push(`${s.id}: 練習とテストで問いが違う`);
     if (/盤/.test(t.prompt)) bad.push(`${s.id}: 問いに「盤」と書いてある（${t.prompt}）`);
     // 画面に出る言葉に、初めての人に通じない言い方を混ぜない
     for (const w of ["ビット目", "基準"]) {
@@ -46,6 +48,11 @@ for (const s of STATIONS) {
       for (const st2 of q.steps) if ((st2.t + st2.v).includes(w)) bad.push(`${s.id}: 手順に「${w}」が入っている（${st2.t}）`);
     }
     if (!q.steps || q.steps.length < 2) bad.push(`${s.id}: 手順が足りない`);
+    // 問いが「この4つを」と数えているのに、材料が4つ無い、を止める
+    const said = (q.prompt.match(/この(\d+)つ/) || [])[1];
+    if (said && Number(said) !== (q.given || []).length) {
+      bad.push(`${s.id}: 問いは「この${said}つ」なのに、材料は ${(q.given || []).length} つ`);
+    }
     if (!INPUTS.includes(q.input)) bad.push(`${s.id}: 知らない盤 ${q.input}`);
     if (q.answer == null || q.answer === "") bad.push(`${s.id}: 答えが空`);
     if (q.input === "split" && (!q.board || !q.board.ip)) bad.push(`${s.id}: 盤の材料が足りない`);
@@ -86,9 +93,12 @@ for (const s of STATIONS) {
       const bits = q.goal === "host" ? 32 - Number(q.answer.match(/\/(\d+)/)[1])
         : Number(q.answer.match(/\/(\d+)/)[1]) - q.base;
       out = pickOut(Math.pow(2, bits), q.goal, q.base).out;
-    } else if (q.input === "wild") {
-      // 255 から引くだけ
-      out = maskStr(q.board.len).split(".").map((v) => 255 - Number(v)).join(".");
+    } else if (q.input === "final") {
+      // 仕上げは盤を使わない（本番と同じ4択）。正解が選択肢に入っているかだけ見る
+      if (!q.choices || !q.choices.includes(String(q.answer))) {
+        bad.push(`${s.id}: 4択に正解が入っていない（答え=${q.answer}）`);
+      }
+      continue;
     } else if (q.input === "pow") {
       // 表から、その回数のところを押す
       out = q.goal === "toValue" ? String(Math.pow(2, q.board.n)) : String(q.board.n);

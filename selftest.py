@@ -32,7 +32,7 @@ def verify(q):
     s = q["station"]
     counts[s] += 1
 
-    if q["input"] not in ("pow", "sum", "sub", "split", "pick", "stack", "mask", "wild"):
+    if q["input"] not in ("pow", "sum", "sub", "split", "pick", "stack", "mask", "final"):
         fails.append(f'{s}  知らない盤: {q["input"]}')
     if len(q.get("steps", [])) < 2:
         fails.append(f"{s}  手順が足りない")
@@ -84,6 +84,31 @@ def verify(q):
             fails.append(f"S9  材料と盤が食い違う: {q['given']} / {q['board']}")
         expect(q, ".".join(str(255 - int(x)) for x in str(m).split(".")))
 
+    elif s == "SF":                                 # 仕上げ（本番の形）
+        k = q["goal"]
+        if k == "mask":
+            ip, ln = g(q, "IPアドレス").split("/")
+            expect(q, str(ipaddress.ip_network(f"{ip}/{ln}", strict=False).netmask))
+        elif k == "binmask":
+            expect(q, "/" + str(sum(o.count("1") for o in g(q, "サブネットマスク（2進数）").split("."))))
+        elif k in ("net", "bc", "gw"):
+            n = ipaddress.ip_network(g(q, "IPアドレス"), strict=False)
+            expect(q, str(n.network_address) if k == "net"
+                   else str(n.broadcast_address) if k == "bc"
+                   else str(n.network_address + 1))
+        elif k == "same":
+            a = ipaddress.ip_interface(g(q, "1台目")).ip
+            b = ipaddress.ip_interface(g(q, "2台目")).ip
+            L = next(n for n in range(32, -1, -1)
+                     if ipaddress.ip_network(f"{a}/{n}", strict=False).network_address
+                     == ipaddress.ip_network(f"{b}/{n}", strict=False).network_address)
+            expect(q, str(ipaddress.ip_network(f"{a}/{L}", strict=False).netmask))
+        elif k == "sum":
+            ns = [ipaddress.ip_network(x["v"]) for x in q["given"]]
+            expect(q, str(next(n for n in ipaddress.collapse_addresses(ns))))
+        elif k == "hosts":
+            ln = int(g(q, "サブネットマスク").split("/")[1].rstrip("）"))
+            expect(q, f"{2 ** (32 - ln) - 2}台")
     elif s == "S8":                                 # プレフィックス長 ↔ サブネットマスク
         ln = q["board"]["len"]
         net = ipaddress.ip_network(f"0.0.0.0/{ln}")
