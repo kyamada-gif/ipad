@@ -10,7 +10,7 @@
 const path = require("path"), fs = require("fs");
 const R = path.join(__dirname, "..");
 const { JSDOM } = require(path.join(R, ".check/node_modules/jsdom"));
-const { STATIONS, GROUPS } = require(path.join(R, "gen.js"));
+const { STATIONS } = require(path.join(R, "gen.js"));
 const B = ["vendor/react.production.min.js", "vendor/react-dom.production.min.js", "gen.js", "app.js"]
   .map((f) => fs.readFileSync(path.join(R, f), "utf8")).join("\n");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -75,27 +75,40 @@ async function toHome(h) {
     if (!h.$(".blocked")) why.push("鍵の札を押しても、開く条件が出ない");
     console.log(`  ① まっさら      ${lamps.join("")}   条件の案内:${h.$(".blocked") ? "出る" : "出ない"}`);
 
-    /* まとまりの最後の、押すと開くブロック。**閉じているのが最初の姿。**
-       置き場所（基礎の最後の札の下）も、gen.js の GROUPS から見て確かめる */
-    const gs = GROUPS.filter((g) => g.tip);
-    if (!gs.length) why.push("押すと開くブロックが gen.js に1つも無い");
-    const tb = h.$$(".tipb");
-    if (tb.length !== gs.length) why.push(`押すと開くブロックが ${tb.length} 個（GROUPS では ${gs.length} 個）`);
-    for (const b of tb) {
-      if (b.querySelector(".tipb-b")) why.push("押す前から中身が開いている");
-      h.click(b.querySelector(".tipb-h")); await wait(60);
-      if (!b.querySelector(".tipb-b")) why.push("押しても中身が開かない");
-      // 中身が本当に出ているか（枠だけ開いて空、を通さない）
-      if (b.querySelectorAll(".tip-r").length === 0) why.push("開いても行が1つも無い");
-      h.click(b.querySelector(".tipb-h")); await wait(60);
-      if (b.querySelector(".tipb-b")) why.push("もう一度押しても閉じない");
+    /* コツのボタン。**鍵のうちは出さない。**中身を先に見せないため */
+    if (h.$$(".t-tip").length) why.push("まっさら（ステージ1しか開いていない）なのにコツのボタンが出ている");
+    console.log(`  ①' コツのボタン  鍵のうちは出ない:${h.$$(".t-tip").length ? "NG" : "OK"}`);
+  }
+
+  /* ①'' コツは、そのステージが開いてから、札の中で開く。
+     置き場所（バッジの左）も見る。**押しどころが二重になっていないか**も見る */
+  {
+    const ts = STATIONS.filter((s) => s.tip);
+    if (!ts.length) why.push("コツを持つステージが gen.js に1つも無い");
+    const prog = {}; for (const s of STATIONS) prog[s.id] = { seen: 10, correct: 10, lit: true, solo: false };
+    const h = open(prog); await wait(150);
+    const btns = h.$$(".t-tip");
+    if (btns.length !== ts.length) why.push(`コツのボタンが ${btns.length} 個（gen.js では ${ts.length} 個）`);
+    for (const st of ts) {
+      const card = h.$$(".tile").find((t) => t.textContent.includes(st.name));
+      const top = card.querySelector(".t-top");
+      const kids = [...top.children].map((e) => e.className.split(" ")[0]);
+      // 名前の押しどころ → コツ → バッジ の順。バッジの左にいるか
+      if (kids.join(">") !== "t-h>t-tip>slot") why.push(`${st.name}: 上の段の並びが ${kids.join(">")}`);
+      // 押しどころの入れ子（ボタンの中のボタン）は、押しても反応しない場所を作る
+      if (card.querySelector("button button")) why.push(`${st.name}: 押しどころが入れ子になっている`);
+      const b = card.querySelector(".t-tip");
+      if (card.querySelector(".tipb-b")) why.push(`${st.name}: 押す前から中身が開いている`);
+      h.click(b); await wait(60);
+      if (!card.querySelector(".tipb-b")) why.push(`${st.name}: 押しても中身が開かない`);
+      if (card.querySelectorAll(".tip-r").length === 0) why.push(`${st.name}: 開いても行が1つも無い`);
+      // コツを開いても、札そのものは開かない（練習・テストの入口は出てこない）
+      if (card.querySelector(".t-go")) why.push(`${st.name}: コツを押したら札まで開いた`);
+      h.click(b); await wait(60);
+      if (card.querySelector(".tipb-b")) why.push(`${st.name}: もう一度押しても閉じない`);
     }
-    // 基礎の最後＝ステージ4の札の下に出ているか（札より前や、まとまりの頭に出ていない）
-    const kids = [...h.$(".road").children];
-    const at = kids.findIndex((k) => k.querySelector(".tipb"));
-    const no = at >= 0 ? kids[at].querySelector(".t-name").textContent.trim().split("　")[0] : "無し";
-    if (String(no) !== String(gs[0].to)) why.push(`ブロックがステージ ${no} の下（基礎の最後は ${gs[0].to}）`);
-    console.log(`  ①' コツのブロック  ${tb.length}個   置き場所:ステージ${no} の下   押すと開く:${why.length ? "NG" : "OK"}`);
+    if (h.errs.length) why.push(`画面の例外: ${h.errs[0]}`);
+    console.log(`  ①'' コツのボタン  ${btns.length}個   バッジの左   押すと札の中で開く:${why.length ? "NG" : "OK"}`);
   }
 
   /* ② 練習を5問。● が付いて、次のステージの鍵が外れる */

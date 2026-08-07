@@ -277,16 +277,18 @@ for (const line of src.split("\n")) {
 /* 説明の1枚の文章は gen.js の表に移した（WAY / LINK / FIGURE / 見本の注記）。
    app.jsx だけ見ていると、そこがまるごと見張りの外に出てしまう。 */
 {
-  const { WAY, LINK, FIGURE, EXAMPLES: EX, GROUPS: GR } = require("./gen.js");
+  const { WAY, LINK, FIGURE, EXAMPLES: EX, GROUPS: GR, STATIONS: ST } = require("./gen.js");
   const texts = [];
   for (const k of Object.keys(WAY)) texts.push(WAY[k].h, WAY[k].b);
   for (const k of Object.keys(LINK)) texts.push(LINK[k]);
-  // トップ画面の区切りと、その最後に置くブロック（押すと開くやつ）も画面に出る
-  for (const g of GR) {
-    texts.push(g.name, g.note);
-    if (!g.tip) continue;
-    texts.push(g.tip.label, g.tip.sub);
-    for (const p of g.tip.parts) texts.push(p.h, p.b, ...p.rows.flat());
+  // トップ画面の区切りと、札の名前・例も画面に出る
+  for (const g of GR) texts.push(g.name, g.note);
+  // 札の中で開く「コツ」（バッジの左のボタン）
+  for (const s of ST) {
+    texts.push(s.name, s.ex);
+    if (!s.tip) continue;
+    texts.push(s.tip.label, s.tip.sub);
+    for (const p of s.tip.parts) texts.push(p.h, p.b, ...p.rows.flat());
   }
   // 見本の表も画面に出る。ここが見張りの外だったので「基準」が1つ残っていた
   for (const k of Object.keys(EX)) {

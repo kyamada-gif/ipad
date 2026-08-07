@@ -89,6 +89,7 @@ function Home({
 }) {
   const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null); // いま開いている札
+  const [tip, setTip] = useState(null); // コツを開いている札（札の開け閉めとは別）
   const doneT = STATIONS.filter(s => isSolo(progress, s.id)).length;
   return /*#__PURE__*/React.createElement("div", {
     className: "wrap"
@@ -135,6 +136,8 @@ function Home({
       className: "link"
     }), /*#__PURE__*/React.createElement("div", {
       className: "tile" + (open ? "" : " locked") + (lit ? " lit" : "") + (solo ? " solo" : "") + (pick === s.id ? " pick" : "")
+    }, /*#__PURE__*/React.createElement("div", {
+      className: "t-top"
     }, /*#__PURE__*/React.createElement("button", {
       className: "t-h",
       onClick: () => {
@@ -149,9 +152,14 @@ function Home({
       className: "t-name"
     }, s.no, "\u3000", s.name), /*#__PURE__*/React.createElement("span", {
       className: "t-ex"
-    }, s.ex)), /*#__PURE__*/React.createElement("span", {
+    }, s.ex))), s.tip && open && /*#__PURE__*/React.createElement("button", {
+      className: "t-tip" + (tip === s.id ? " on" : ""),
+      onClick: () => setTip(tip === s.id ? null : s.id)
+    }, s.tip.label), /*#__PURE__*/React.createElement("span", {
       className: "slot" + (solo ? " got" : "")
-    }, solo ? "🏅" : "")), pick === s.id && open &&
+    }, solo ? "🏅" : "")), tip === s.id && s.tip && open && /*#__PURE__*/React.createElement(TipBody, {
+      tip: s.tip
+    }), pick === s.id && open &&
     /*#__PURE__*/
     /* 仕上げは練習が無いので、入口は1つだけ。
        押すと説明の1枚（本番で聞かれる8つの形）が出て、その下がテストへの入口になる */
@@ -167,9 +175,7 @@ function Home({
       className: "blocked"
     }, s.need.map(n => byId(n).name).join(" と "), " \u304C\u3067\u304D\u308B\u3068\u958B\u304D\u307E\u3059"), blocked === s.id && open && /*#__PURE__*/React.createElement("div", {
       className: "blocked"
-    }, "\u5148\u306B\u7DF4\u7FD2\u3067\u3067\u304D\u308B\u3068\u3001\u30C6\u30B9\u30C8\u304C\u958B\u304D\u307E\u3059"), GROUPS.find(x => x.endAt === s.id && x.tip) && /*#__PURE__*/React.createElement(TipBlock, {
-      tip: GROUPS.find(x => x.endAt === s.id).tip
-    }));
+    }, "\u5148\u306B\u7DF4\u7FD2\u3067\u3067\u304D\u308B\u3068\u3001\u30C6\u30B9\u30C8\u304C\u958B\u304D\u307E\u3059"));
   })), /*#__PURE__*/React.createElement("div", {
     className: "foot"
   }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u304C\u3067\u304D\u305F\u3000\u3000\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
@@ -178,21 +184,13 @@ function Home({
   }, unlock ? "鍵をかけ直す" : "全部開く（お試し）"));
 }
 
-/** まとまりの最後に置く、押すと開くブロック。中身は gen.js の GROUPS の tip。
+/** 札の中で開く「コツ」の中身。データは gen.js の STATIONS の tip。
  *  **解き方はここに書かない。**教材の手順で解けるようになったうえで、
  *  足し算を省ける形だけを置く。閉じているのが最初の姿。 */
-function TipBlock({
+function TipBody({
   tip
 }) {
-  const [open, setOpen] = useState(false);
   return /*#__PURE__*/React.createElement("div", {
-    className: "tipb"
-  }, /*#__PURE__*/React.createElement("button", {
-    className: "tipb-h",
-    onClick: () => setOpen(!open)
-  }, /*#__PURE__*/React.createElement("span", null, tip.label), /*#__PURE__*/React.createElement("span", {
-    className: "tipb-m"
-  }, open ? "−" : "＋")), open && /*#__PURE__*/React.createElement("div", {
     className: "tipb-b"
   }, /*#__PURE__*/React.createElement("div", {
     className: "tipb-s"
@@ -208,7 +206,7 @@ function TipBlock({
     className: "tip-r"
   }, /*#__PURE__*/React.createElement("b", null, k), /*#__PURE__*/React.createElement("i", {
     className: "tip-a"
-  }, "\u2192"), /*#__PURE__*/React.createElement("span", null, v)))))));
+  }, "\u2192"), /*#__PURE__*/React.createElement("span", null, v))))));
 }
 
 /* =========================================================================
@@ -2159,15 +2157,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
    枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
    閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
-/* **札より目立たせない。**札の名前は「白 ＋ 太字」なので、ここは太字を外す。
-   大きさは札と同じにして読みやすさは残す（前は13px灰で、沈んで見えなかった）。
-   差の付け方を色だけにしないために、太いか細いかで分ける */
-.tipb{margin-top:var(--s3);border:1px solid var(--bg-tile);border-radius:12px;background:var(--bg1)}
-.tipb-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
-  width:100%;min-height:44px;text-align:left;padding:var(--s3) var(--s4);
-  font-size:var(--f3);font-weight:400;color:var(--ink)}
-.tipb-m{font-size:var(--f3);color:var(--ink2);flex:0 0 auto}
-.tipb-b{padding:0 var(--s4) var(--s4)}
+/* コツの中身。**札の中で開く。**前は基礎の最後に1枚のブロックとして浮かせていたが、
+   札の列から外れて見えた。いまはバッジの左のボタンを押すと、その札の中で開く */
+.tipb-b{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--bg-tile)}
 .tipb-s{font-size:var(--f1);color:var(--ink2);line-height:1.7}
 .tip-p{margin-top:var(--s4)}
 .tip-h{font-size:var(--f2);font-weight:700;color:var(--ink);line-height:1.6}
@@ -2376,7 +2368,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dot{font-size:var(--f5);font-weight:800;color:var(--ink2);padding:0 1px}
 .sub{font-size:var(--f2);color:var(--ink2);margin:-4px 0 8px}
 /* ステージの札。上が名前、下が「練習する」「テストをする」の2つ */
-.t-h{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:48px}
+/* 札の上の段。名前の押しどころ ／ コツ ／ バッジ。**押しどころは入れ子にしない** */
+.t-top{display:flex;align-items:center;gap:12px}
+.t-h{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;min-height:48px}
+/* コツ。**バッジと同じ大きさ**にして、その左に並べる。
+   枠があるもの＝押せるもの。札の名前より弱くするため、細字の灰にする */
+.t-tip{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;
+  font-size:var(--f2);color:var(--ink2)}
+.t-tip.on{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-t)}
 .slot{flex:0 0 auto;width:44px;height:44px;border:1.5px dashed var(--line);border-radius:10px;
   display:flex;align-items:center;justify-content:center;font-size:var(--f5)}
 .slot.got{border-style:solid;border-color:var(--gold);background:var(--solo-bg)}

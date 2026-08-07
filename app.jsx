@@ -58,6 +58,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
 function Home({ progress, unlock, onUnlock, onStart }) {
   const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null);   // いま開いている札
+  const [tip, setTip] = useState(null);     // コツを開いている札（札の開け閉めとは別）
   const doneT = STATIONS.filter((s) => isSolo(progress, s.id)).length;
 
   return (
@@ -98,15 +99,26 @@ function Home({ progress, unlock, onUnlock, onStart }) {
                   7ステージ分14個のボタンが最初から並んでいると、どこを見ればいいのか分からなくなる */}
               <div className={"tile" + (open ? "" : " locked") + (lit ? " lit" : "") + (solo ? " solo" : "")
                 + (pick === s.id ? " pick" : "")}>
-                <button className="t-h" onClick={() => { setPick(pick === s.id ? null : s.id); setBlocked(null); }}>
-                  <span className="lamp">{open ? (lit ? "●" : "○") : "🔒"}</span>
-                  <span className="t-b">
-                    <span className="t-name">{s.no}　{s.name}</span>
-                    <span className="t-ex">{s.ex}</span>
-                  </span>
+                {/* **バッジと、コツのボタンは、名前の押しどころの外に出す。**
+                    ボタンの中にボタンは置けない（押しどころが二重になる） */}
+                <div className="t-top">
+                  <button className="t-h" onClick={() => { setPick(pick === s.id ? null : s.id); setBlocked(null); }}>
+                    <span className="lamp">{open ? (lit ? "●" : "○") : "🔒"}</span>
+                    <span className="t-b">
+                      <span className="t-name">{s.no}　{s.name}</span>
+                      <span className="t-ex">{s.ex}</span>
+                    </span>
+                  </button>
+                  {/* コツ。**そのステージが開いてから出す。**鍵のうちに中身を見せない。
+                      札の開け閉めとは別に動く（練習に入らずに、ここだけ読める） */}
+                  {s.tip && open && (
+                    <button className={"t-tip" + (tip === s.id ? " on" : "")}
+                      onClick={() => setTip(tip === s.id ? null : s.id)}>{s.tip.label}</button>
+                  )}
                   {/* バッジの置き場。テストに合格するまでは空の枠のまま */}
                   <span className={"slot" + (solo ? " got" : "")}>{solo ? "🏅" : ""}</span>
-                </button>
+                </div>
+                {tip === s.id && s.tip && open && <TipBody tip={s.tip} />}
                 {pick === s.id && open && (
                   /* 仕上げは練習が無いので、入口は1つだけ。
                      押すと説明の1枚（本番で聞かれる8つの形）が出て、その下がテストへの入口になる */
@@ -129,10 +141,6 @@ function Home({ progress, unlock, onUnlock, onStart }) {
               {blocked === s.id && open && (
                 <div className="blocked">先に練習でできると、テストが開きます</div>
               )}
-              {/* まとまりの最後の札の下。押すまで閉じている（開いたままだと、札の列が読めなくなる） */}
-              {GROUPS.find((x) => x.endAt === s.id && x.tip) && (
-                <TipBlock tip={GROUPS.find((x) => x.endAt === s.id).tip} />
-              )}
             </div>
           );
         })}
@@ -147,32 +155,22 @@ function Home({ progress, unlock, onUnlock, onStart }) {
   );
 }
 
-/** まとまりの最後に置く、押すと開くブロック。中身は gen.js の GROUPS の tip。
+/** 札の中で開く「コツ」の中身。データは gen.js の STATIONS の tip。
  *  **解き方はここに書かない。**教材の手順で解けるようになったうえで、
  *  足し算を省ける形だけを置く。閉じているのが最初の姿。 */
-function TipBlock({ tip }) {
-  const [open, setOpen] = useState(false);
+function TipBody({ tip }) {
   return (
-    <div className="tipb">
-      {/* 枠があるもの＝押せるもの。開いているかどうかは、右の印の向きで言う */}
-      <button className="tipb-h" onClick={() => setOpen(!open)}>
-        <span>{tip.label}</span>
-        <span className="tipb-m">{open ? "−" : "＋"}</span>
-      </button>
-      {open && (
-        <div className="tipb-b">
-          <div className="tipb-s">{tip.sub}</div>
-          {tip.parts.map((p, i) => (
-            <div key={i} className="tip-p">
-              <div className="tip-h">{p.h}</div>
-              <div className="tip-s">{p.b}</div>
-              {p.rows.map(([k, v], j) => (
-                <div key={j} className="tip-r"><b>{k}</b><i className="tip-a">→</i><span>{v}</span></div>
-              ))}
-            </div>
+    <div className="tipb-b">
+      <div className="tipb-s">{tip.sub}</div>
+      {tip.parts.map((p, i) => (
+        <div key={i} className="tip-p">
+          <div className="tip-h">{p.h}</div>
+          <div className="tip-s">{p.b}</div>
+          {p.rows.map(([k, v], j) => (
+            <div key={j} className="tip-r"><b>{k}</b><i className="tip-a">→</i><span>{v}</span></div>
           ))}
         </div>
-      )}
+      ))}
     </div>
   );
 }
@@ -1759,15 +1757,9 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
    枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
    閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
-/* **札より目立たせない。**札の名前は「白 ＋ 太字」なので、ここは太字を外す。
-   大きさは札と同じにして読みやすさは残す（前は13px灰で、沈んで見えなかった）。
-   差の付け方を色だけにしないために、太いか細いかで分ける */
-.tipb{margin-top:var(--s3);border:1px solid var(--bg-tile);border-radius:12px;background:var(--bg1)}
-.tipb-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
-  width:100%;min-height:44px;text-align:left;padding:var(--s3) var(--s4);
-  font-size:var(--f3);font-weight:400;color:var(--ink)}
-.tipb-m{font-size:var(--f3);color:var(--ink2);flex:0 0 auto}
-.tipb-b{padding:0 var(--s4) var(--s4)}
+/* コツの中身。**札の中で開く。**前は基礎の最後に1枚のブロックとして浮かせていたが、
+   札の列から外れて見えた。いまはバッジの左のボタンを押すと、その札の中で開く */
+.tipb-b{margin-top:var(--s3);padding-top:var(--s3);border-top:1px solid var(--bg-tile)}
 .tipb-s{font-size:var(--f1);color:var(--ink2);line-height:1.7}
 .tip-p{margin-top:var(--s4)}
 .tip-h{font-size:var(--f2);font-weight:700;color:var(--ink);line-height:1.6}
@@ -1976,7 +1968,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dot{font-size:var(--f5);font-weight:800;color:var(--ink2);padding:0 1px}
 .sub{font-size:var(--f2);color:var(--ink2);margin:-4px 0 8px}
 /* ステージの札。上が名前、下が「練習する」「テストをする」の2つ */
-.t-h{display:flex;align-items:center;gap:12px;width:100%;text-align:left;min-height:48px}
+/* 札の上の段。名前の押しどころ ／ コツ ／ バッジ。**押しどころは入れ子にしない** */
+.t-top{display:flex;align-items:center;gap:12px}
+.t-h{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;min-height:48px}
+/* コツ。**バッジと同じ大きさ**にして、その左に並べる。
+   枠があるもの＝押せるもの。札の名前より弱くするため、細字の灰にする */
+.t-tip{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;
+  font-size:var(--f2);color:var(--ink2)}
+.t-tip.on{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-t)}
 .slot{flex:0 0 auto;width:44px;height:44px;border:1.5px dashed var(--line);border-radius:10px;
   display:flex;align-items:center;justify-content:center;font-size:var(--f5)}
 .slot.got{border-style:solid;border-color:var(--gold);background:var(--solo-bg)}
