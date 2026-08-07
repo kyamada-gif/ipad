@@ -270,8 +270,28 @@ function TipBody({
    受け取った側が、ステージの並びも名前も知らないまま読めるようにする。
    だから stations（id・番号・名前）も一緒に入れる。
    ========================================================================= */
-/** 書き出す中身。**計算はここ1か所。**画面とファイルで中身が違う、を起こさない。 */
+/** 書き出す中身。**計算はここ1か所。**画面とファイルで中身が違う、を起こさない。
+ *
+ *  progress は、端末の中では**触ったステージの分しか無く、まだ出ていない項目はキーごと無い。**
+ *  そのまま出すと、受け取る側が「無いのか、0なのか」を毎回考えることになる。
+ *  だから**10ステージぶんを、7項目そろえて**出す。無い数は null（0 ではない。
+ *  0 だと「0.0秒で解いた」と区別が付かない）。 */
 function exportData(me) {
+  const p = load();
+  const progress = {};
+  for (const s of STATIONS) {
+    const c = p[s.id] || {};
+    const ms = v => typeof v === "number" ? v : null;
+    progress[s.id] = {
+      seen: c.seen || 0,
+      correct: c.correct || 0,
+      lit: !!c.lit,
+      solo: !!c.solo,
+      bestMs: ms(c.bestMs),
+      testBestMs: ms(c.testBestMs),
+      lastMs: ms(c.lastMs)
+    };
+  }
   return {
     app: "ipcalc2",
     name: me.name || "",
@@ -282,7 +302,7 @@ function exportData(me) {
       no: s.no,
       name: s.name
     })),
-    progress: load(),
+    progress,
     tests: loadTests()
   };
 }

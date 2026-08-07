@@ -165,7 +165,30 @@ async function run(h, test, missAt) {
         if ((d.stations || []).map((s) => s.id).join(",") !== STATIONS.map((s) => s.id).join(",")) {
           why.push(`stations の並びが違う（${(d.stations || []).map((s) => s.id).join(",")}）`);
         }
-        if (!d.progress || !d.progress.S0) why.push("progress が入っていない");
+        /* **10ステージぶん、7項目そろって出ているか。**
+           端末の中には触った分しか無いので、そのまま出すと歯抜けになる。
+           受け取る側が「無いのか、0なのか」を考えずに済むように、ここでそろえている */
+        const FIELDS = ["seen", "correct", "lit", "solo", "bestMs", "testBestMs", "lastMs"];
+        const pk = Object.keys(d.progress || {});
+        if (pk.join(",") !== STATIONS.map((s) => s.id).join(",")) {
+          why.push(`progress のキーが ${pk.join(",")}（10ステージぶん、並び順で出るはず）`);
+        }
+        for (const s of STATIONS) {
+          const row = (d.progress || {})[s.id] || {};
+          const miss = FIELDS.filter((f) => !(f in row));
+          if (miss.length) { why.push(`${s.id}: ${miss.join(",")} が無い`); break; }
+          for (const f of ["bestMs", "testBestMs", "lastMs"]) {
+            if (row[f] !== null && typeof row[f] !== "number") why.push(`${s.id}.${f} が ${row[f]}（数か null のはず）`);
+          }
+          for (const f of ["lit", "solo"]) {
+            if (typeof row[f] !== "boolean") why.push(`${s.id}.${f} が ${row[f]}（true か false のはず）`);
+          }
+        }
+        // まだ触っていないステージも、0 と false と null で埋まっていること
+        const zero = d.progress[STATIONS[STATIONS.length - 1].id];
+        if (zero.seen !== 0 || zero.lit !== false || zero.bestMs !== null) {
+          why.push(`まだ触っていないステージが ${JSON.stringify(zero)}`);
+        }
         if ((d.tests || []).length !== 1) why.push(`tests が ${(d.tests || []).length} 行`);
         /* 打ちこんだ名前が、端末に残って、次に開いたときも出るか。
            JSDOM は窓ごとに別の入れ物を持つので、残った文字列を新しい窓に持っていって見る */
