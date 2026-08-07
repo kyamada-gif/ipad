@@ -81,7 +81,7 @@ function Home({ progress, onStart, onExport }) {
           // 10個の札がただ並んでいると、どこからが本番の話か分からない。
           // 基礎（1〜4）／試験レベル（5〜9）／仕上げ（10）で区切る
           const g = GROUPS.find((x) => x.at === s.id);
-          const solo = isSolo(progress, s.id), lit = isLit(progress, s.id);
+          const solo = isSolo(progress, s.id);
           // 仕上げだけは練習が無い。説明の1枚を見たら、そのままテストへ
           const hasDrill = s.drill !== false;
           return (
@@ -99,14 +99,13 @@ function Home({ progress, onStart, onExport }) {
               {/* はじめは札だけ。押した札にだけ、2つのボタンが出る。
                   7ステージ分14個のボタンが最初から並んでいると、どこを見ればいいのか分からなくなる */}
               {/* **鍵は無い。**どのステージも、練習もテストも、いつでも押せる。
-                  ランプは「まだ（○）」と「練習ができた（●）」の2つだけ */}
-              <div className={"tile" + (lit ? " lit" : "") + (solo ? " solo" : "")
-                + (pick === s.id ? " pick" : "")}>
+                  **札の見た目は、どのステージも同じ。**変わるのはバッジの有無だけ。
+                  練習ができたかどうかで色や印を変えると、見るものが2つになる */}
+              <div className={"tile" + (pick === s.id ? " pick" : "")}>
                 {/* **バッジは、名前の押しどころの外に出す。**
                     ボタンの中にボタンは置けない（押しどころが二重になる） */}
                 <div className="t-top">
                   <button className="t-h" onClick={() => setPick(pick === s.id ? null : s.id)}>
-                    <span className="lamp">{lit ? "●" : "○"}</span>
                     <span className="t-b">
                       <span className="t-name">{s.no}　{s.name}</span>
                       <span className="t-ex">{s.ex}</span>
@@ -143,7 +142,7 @@ function Home({ progress, onStart, onExport }) {
         })}
       </div>
 
-      <div className="foot">○ まだ　　● 練習ができた　　🏅 バッジ（テストで9割）</div>
+      <div className="foot">🏅 バッジ（テストで9割）</div>
       {/* いちばん下。**ふだんは使わないもの**なので、ここに置く */}
       <button className="unlock" onClick={onExport}>学習の記録を書き出す</button>
     </div>
@@ -1810,13 +1809,13 @@ const CSS = `
   /* 青 ＝ いま選んでいるもの */
   --blue:#58a6ff; --blue-t:#79c0ff; --blue-bg:#132030;
   /* 緑 ＝ 進む・できた */
-  --green:#2ea043; --green-s:#238636; --green-t:#56d364; --green-bg:#0f2a16; --green-a:#2ea04355;
+  --green:#2ea043; --green-s:#238636; --green-t:#56d364; --green-bg:#0f2a16;
   /* 赤 ＝ 違う */
   --red:#f85149; --red-t:#ff7b72; --red-bg:#2a1315;
   /* 黄 ＝ 区切りの線・断り書き */
-  --gold:#e3b341; --gold-bg:#241c10; --gold-line:#5c4d20; --gold-a:#e3b34188;
+  --gold:#e3b341; --gold-bg:#241c10; --gold-line:#5c4d20;
   /* 札の地・押したとき・影 */
-  --lit-bg:#121a14; --solo-bg:#1a170f; --sunk:#0f141b; --key-op:#1c222b; --flash:#1d2a1a;
+  --solo-bg:#1a170f; --sunk:#0f141b; --key-op:#1c222b; --flash:#1d2a1a;
   --white:#fff; --shadow:#000a;
 }
 *{box-sizing:border-box}
@@ -1848,11 +1847,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .gnote{font-size:var(--f2);color:var(--ink2);line-height:1.7;margin-top:var(--s1)}
 .tile{display:block;width:100%;text-align:left;
   background:var(--bg1);border:1px solid var(--bg-tile);border-radius:12px;padding:12px 14px;transition:.15s}
-.tile.lit{border-color:var(--green-a);background:var(--lit-bg)}
-.tile.solo{border-color:var(--gold-a);background:var(--solo-bg)}
-.lamp{font-size:var(--f4);color:var(--ink3);flex:0 0 auto;width:22px;text-align:center}
-.tile.lit .lamp{color:var(--green-t)}
-.tile.solo .lamp{color:var(--gold)}
 .t-b{flex:1;min-width:0}
 .t-name{display:block;font-size:var(--f3);font-weight:700}
 .t-ex{display:block;font-size:var(--f1);color:var(--blue-t);margin-top:4px;

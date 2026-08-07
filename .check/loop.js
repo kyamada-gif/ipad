@@ -1,7 +1,7 @@
 /* 一周する道すじを見る。**ここが通らないと、アプリとして成立していない。**
  *   まっさら → **10ステージとも開いている（鍵は無い）。**いきなりテストにも入れる
- *   練習を5問ぜんぶ解く → ● が付く
- *   テストを10問ぜんぶ解く → 🏅 が付く
+ *   練習を5問ぜんぶ解く → lit が立つ（**画面には出ない。書き出す JSON に入る**）
+ *   テストを10問ぜんぶ解く → 🏅 が付く（**札で変わるのはここだけ**）
  *   わざと外すと、その場に手順が出る
  *
  * 前は .check/run.js が見ていたが、あれは**もう無い画面**（暗記ドリル）を前提に
@@ -66,16 +66,20 @@ async function toHome(h) {
   /* ① まっさら。**鍵は無い。**10ステージとも ○ で、どれも押すと2つの入口が出る */
   {
     const h = open(null); await wait(150);
-    const lamps = h.$$(".tile .lamp").map((e) => e.textContent);
-    if (lamps.length !== STATIONS.length) why.push(`札が ${lamps.length} 枚`);
-    if (lamps.some((x) => x !== "○")) why.push(`まっさらなのに ○ でない札がある（${lamps.join("")}）`);
-    if (h.$$(".tile.locked").length) why.push("鍵のかかった札が残っている");
+    /* **札の見た目は、どのステージも同じ。**変わるのはバッジの有無だけ。
+       前は ○ ● 🔒 のランプと、緑・金の色分けがあった。**どれも残っていないこと**を見る */
+    const tiles = h.$$(".tile");
+    if (tiles.length !== STATIONS.length) why.push(`札が ${tiles.length} 枚`);
+    if (h.$$(".tile .lamp").length) why.push("ランプ（○ ● 🔒）が残っている");
+    if (h.$$(".tile.locked, .tile.lit, .tile.solo").length) why.push("札の色分けが残っている");
+    if (h.$$(".slot.got").length) why.push("まっさらなのにバッジが付いている");
+    if (h.$$(".slot").length !== STATIONS.length) why.push(`バッジの枠が ${h.$$(".slot").length} 個`);
     // まっさらでも、最後のステージから始められる（練習もテストも押せる）
     const last = h.$$(".tile")[STATIONS.length - 1];
     h.click(last.querySelector(".t-h")); await wait(80);
     const go = [...last.querySelectorAll(".t-go .go")].map((b) => b.textContent);
     if (!go.length) why.push("まっさらだと、最後のステージの入口が出ない");
-    console.log(`  ① まっさら      ${lamps.join("")}   最後のステージの入口:${go.join("/") || "無し"}`);
+    console.log(`  ① まっさら      札 ${tiles.length}枚・ランプ無し・バッジ0   最後のステージの入口:${go.join("/") || "無し"}`);
 
     // 1つ目のステージも、練習を1回もやらずにテストへ入れる
     const t1 = h.$$(".tile")[0];
@@ -134,11 +138,14 @@ async function toHome(h) {
     await wait(150);
     const score = (h.$(".rscore") || {}).textContent;
     await toHome(h);
-    const lamps = h.$$(".tile .lamp").map((e) => e.textContent);
-    if (lamps[0] !== "●") why.push(`練習を全問正解しても ● が付かない（${lamps[0]}／${score}）`);
-    // 鍵は無いので、ほかの札は ○ のまま（練習しても勝手に印は付かない）
-    if (lamps.slice(1).some((x) => x !== "○")) why.push(`ほかの札の印が変わっている（${lamps.join("")}）`);
-    console.log(`  ② 練習5問      ${score}  → ${lamps.join("")}`);
+    /* **練習ができたことは、画面には出さない。**だから記録のほうを見る。
+       lit は書き出す JSON にも入るので、ここが立たないと外へ渡らない */
+    const p = JSON.parse(h.w.localStorage.getItem("ipcalc2-progress") || "{}");
+    if (!p.S0 || p.S0.lit !== true) why.push(`練習を全問正解しても lit が立たない（${JSON.stringify(p.S0)}／${score}）`);
+    // 練習ではバッジは付かない。札の見た目も変わらない
+    if (h.$$(".slot.got").length) why.push("練習だけでバッジが付いた");
+    if (h.$$(".tile.lit, .tile.solo").length) why.push("練習で札の色が変わった");
+    console.log(`  ② 練習5問      ${score}  → lit:${p.S0.lit}  バッジ:${h.$$(".slot.got").length}個`);
   }
 
   /* ③ テストを10問。🏅 が付く */
@@ -187,6 +194,6 @@ async function toHome(h) {
   }
 
   for (const m of why) console.log("      ↳ " + m);
-  console.log(why.length ? "✗ 一周する道すじに問題" : "✓ 一周する道すじ：鍵なしで全部開く → 練習で ● → テストで 🏅 → 外すと ✕ と答え");
+  console.log(why.length ? "✗ 一周する道すじに問題" : "✓ 一周する道すじ：鍵なしで全部開く → 練習で lit → テストで 🏅 → 外すと ✕ と答え");
   if (why.length) process.exit(1);
 })();

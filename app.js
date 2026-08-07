@@ -123,8 +123,7 @@ function Home({
     // 10個の札がただ並んでいると、どこからが本番の話か分からない。
     // 基礎（1〜4）／試験レベル（5〜9）／仕上げ（10）で区切る
     const g = GROUPS.find(x => x.at === s.id);
-    const solo = isSolo(progress, s.id),
-      lit = isLit(progress, s.id);
+    const solo = isSolo(progress, s.id);
     // 仕上げだけは練習が無い。説明の1枚を見たら、そのままテストへ
     const hasDrill = s.drill !== false;
     return /*#__PURE__*/React.createElement("div", {
@@ -140,15 +139,13 @@ function Home({
     }, g.note)), i > 0 && !g && /*#__PURE__*/React.createElement("div", {
       className: "link"
     }), /*#__PURE__*/React.createElement("div", {
-      className: "tile" + (lit ? " lit" : "") + (solo ? " solo" : "") + (pick === s.id ? " pick" : "")
+      className: "tile" + (pick === s.id ? " pick" : "")
     }, /*#__PURE__*/React.createElement("div", {
       className: "t-top"
     }, /*#__PURE__*/React.createElement("button", {
       className: "t-h",
       onClick: () => setPick(pick === s.id ? null : s.id)
     }, /*#__PURE__*/React.createElement("span", {
-      className: "lamp"
-    }, lit ? "●" : "○"), /*#__PURE__*/React.createElement("span", {
       className: "t-b"
     }, /*#__PURE__*/React.createElement("span", {
       className: "t-name"
@@ -178,7 +175,7 @@ function Home({
     }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B"))));
   })), /*#__PURE__*/React.createElement("div", {
     className: "foot"
-  }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u304C\u3067\u304D\u305F\u3000\u3000\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
+  }, "\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
     className: "unlock",
     onClick: onExport
   }, "\u5B66\u7FD2\u306E\u8A18\u9332\u3092\u66F8\u304D\u51FA\u3059"));
@@ -2268,13 +2265,13 @@ const CSS = `
   /* 青 ＝ いま選んでいるもの */
   --blue:#58a6ff; --blue-t:#79c0ff; --blue-bg:#132030;
   /* 緑 ＝ 進む・できた */
-  --green:#2ea043; --green-s:#238636; --green-t:#56d364; --green-bg:#0f2a16; --green-a:#2ea04355;
+  --green:#2ea043; --green-s:#238636; --green-t:#56d364; --green-bg:#0f2a16;
   /* 赤 ＝ 違う */
   --red:#f85149; --red-t:#ff7b72; --red-bg:#2a1315;
   /* 黄 ＝ 区切りの線・断り書き */
-  --gold:#e3b341; --gold-bg:#241c10; --gold-line:#5c4d20; --gold-a:#e3b34188;
+  --gold:#e3b341; --gold-bg:#241c10; --gold-line:#5c4d20;
   /* 札の地・押したとき・影 */
-  --lit-bg:#121a14; --solo-bg:#1a170f; --sunk:#0f141b; --key-op:#1c222b; --flash:#1d2a1a;
+  --solo-bg:#1a170f; --sunk:#0f141b; --key-op:#1c222b; --flash:#1d2a1a;
   --white:#fff; --shadow:#000a;
 }
 *{box-sizing:border-box}
@@ -2306,11 +2303,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .gnote{font-size:var(--f2);color:var(--ink2);line-height:1.7;margin-top:var(--s1)}
 .tile{display:block;width:100%;text-align:left;
   background:var(--bg1);border:1px solid var(--bg-tile);border-radius:12px;padding:12px 14px;transition:.15s}
-.tile.lit{border-color:var(--green-a);background:var(--lit-bg)}
-.tile.solo{border-color:var(--gold-a);background:var(--solo-bg)}
-.lamp{font-size:var(--f4);color:var(--ink3);flex:0 0 auto;width:22px;text-align:center}
-.tile.lit .lamp{color:var(--green-t)}
-.tile.solo .lamp{color:var(--gold)}
 .t-b{flex:1;min-width:0}
 .t-name{display:block;font-size:var(--f3);font-weight:700}
 .t-ex{display:block;font-size:var(--f1);color:var(--blue-t);margin-top:4px;
