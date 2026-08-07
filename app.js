@@ -1328,13 +1328,13 @@ function PickBoard({
     className: "o-n"
   }, q.need, "\u53F0 \uFF0B 2 \uFF1D ", /*#__PURE__*/React.createElement("b", null, q.want))), /*#__PURE__*/React.createElement("div", {
     className: "lead " + (w != null ? "past" : "now")
-  }, "\u2461 ", /*#__PURE__*/React.createElement("b", null, q.want), " \u304C\u5165\u308B\u3001\u3044\u3061\u3070\u3093\u5C0F\u3055\u3044\u30B5\u30D6\u30CD\u30C3\u30C8\u3092\u62BC\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2461 ", /*#__PURE__*/React.createElement("b", null, q.want, " \u4EE5\u4E0A"), "\u306E\u30B5\u30D6\u30CD\u30C3\u30C8\u306E\u3046\u3061\u3001\u4E00\u756A\u5C0F\u3055\u3044\u3082\u306E\u3092\u62BC\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "point"
   }, "\u6841\u306E\u91CD\u307F\u8868\u3092\u3001\u5DE6\u3078\u306E\u3070\u3057\u305F\u3060\u3051\u3067\u3059\uFF082\u500D\u305A\u3064\u5897\u3048\u307E\u3059\uFF09")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sub"
   }, "\u30AF\u30E9\u30B9", q.cls, "\uFF08/", q.base, " \u304B\u3089\uFF09\uFF0F \u5FC5\u8981\u306A\u30B5\u30D6\u30CD\u30C3\u30C8\u6570 ", /*#__PURE__*/React.createElement("b", null, q.want)), /*#__PURE__*/React.createElement("div", {
     className: "lead " + (w != null ? "past" : "now")
-  }, /*#__PURE__*/React.createElement("b", null, q.want), " \u304C\u5165\u308B\u3001\u3044\u3061\u3070\u3093\u5C0F\u3055\u3044\u6570\u3092\u62BC\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  }, /*#__PURE__*/React.createElement("b", null, q.want, " \u4EE5\u4E0A"), "\u306E\u6570\u306E\u3046\u3061\u3001\u4E00\u756A\u5C0F\u3055\u3044\u3082\u306E\u3092\u62BC\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "point"
   }, "\u6841\u306E\u91CD\u307F\u8868\u3092\u3001\u5DE6\u3078\u306E\u3070\u3057\u305F\u3060\u3051\u3067\u3059\uFF082\u500D\u305A\u3064\u5897\u3048\u307E\u3059\uFF09\u3002\u6570\u304C\u5927\u304D\u3044\u307B\u3069\u3001\u305F\u304F\u3055\u3093\u5206\u3051\u3089\u308C\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "split"
@@ -2159,11 +2159,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
    枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
    閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
+/* **札より目立たせない。**札の名前は「白 ＋ 太字」なので、ここは太字を外す。
+   大きさは札と同じにして読みやすさは残す（前は13px灰で、沈んで見えなかった）。
+   差の付け方を色だけにしないために、太いか細いかで分ける */
 .tipb{margin-top:var(--s3);border:1px solid var(--bg-tile);border-radius:12px;background:var(--bg1)}
 .tipb-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
   width:100%;min-height:44px;text-align:left;padding:var(--s3) var(--s4);
-  font-size:var(--f2);font-weight:700;color:var(--ink2)}
-.tipb-m{font-size:var(--f3);color:var(--ink3);flex:0 0 auto}
+  font-size:var(--f3);font-weight:400;color:var(--ink)}
+.tipb-m{font-size:var(--f3);color:var(--ink2);flex:0 0 auto}
 .tipb-b{padding:0 var(--s4) var(--s4)}
 .tipb-s{font-size:var(--f1);color:var(--ink2);line-height:1.7}
 .tip-p{margin-top:var(--s4)}

@@ -1109,8 +1109,10 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
           </div>
           <div className="lead past">① 使えない2つ分を足します</div>
           <div className="out"><span className="o-n">{q.need}台 ＋ 2 ＝ <b>{q.want}</b></span></div>
+          {/* **探す範囲と、その中で選ぶものを、文の中で分ける。**
+              「26 が入る」だと、26 との大小がどちら向きなのかを1つ余分に考えないと分からない */}
           <div className={"lead " + (w != null ? "past" : "now")}>
-            ② <b>{q.want}</b> が入る、いちばん小さいサブネットを押します
+            ② <b>{q.want} 以上</b>のサブネットのうち、一番小さいものを押します
           </div>
           {/* 上の段がどこから来たのかを言う。**覚えた表の続き**だと分かれば、覚えるものは増えない */}
           <div className="point">桁の重み表を、左へのばしただけです（2倍ずつ増えます）</div>
@@ -1118,8 +1120,9 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
       ) : (
         <>
           <div className="sub">クラス{q.cls}（/{q.base} から）／ 必要なサブネット数 <b>{q.want}</b></div>
+          {/* 上の台数の向きと同じ言い方にする。同じ動作を2通りの言葉で言わない */}
           <div className={"lead " + (w != null ? "past" : "now")}>
-            <b>{q.want}</b> が入る、いちばん小さい数を押します
+            <b>{q.want} 以上</b>の数のうち、一番小さいものを押します
           </div>
           <div className="point">桁の重み表を、左へのばしただけです（2倍ずつ増えます）。数が大きいほど、たくさん分けられます</div>
         </>
@@ -1756,11 +1759,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
    枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
    閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
+/* **札より目立たせない。**札の名前は「白 ＋ 太字」なので、ここは太字を外す。
+   大きさは札と同じにして読みやすさは残す（前は13px灰で、沈んで見えなかった）。
+   差の付け方を色だけにしないために、太いか細いかで分ける */
 .tipb{margin-top:var(--s3);border:1px solid var(--bg-tile);border-radius:12px;background:var(--bg1)}
 .tipb-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
   width:100%;min-height:44px;text-align:left;padding:var(--s3) var(--s4);
-  font-size:var(--f2);font-weight:700;color:var(--ink2)}
-.tipb-m{font-size:var(--f3);color:var(--ink3);flex:0 0 auto}
+  font-size:var(--f3);font-weight:400;color:var(--ink)}
+.tipb-m{font-size:var(--f3);color:var(--ink2);flex:0 0 auto}
 .tipb-b{padding:0 var(--s4) var(--s4)}
 .tipb-s{font-size:var(--f1);color:var(--ink2);line-height:1.7}
 .tip-p{margin-top:var(--s4)}
