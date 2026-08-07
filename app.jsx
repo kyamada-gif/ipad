@@ -34,12 +34,6 @@ const KEY = "ipcalc2-progress";
 const load = () => { try { return JSON.parse(localStorage.getItem(KEY)) || {}; } catch (e) { return {}; } };
 const save = (p) => { try { localStorage.setItem(KEY, JSON.stringify(p)); } catch (e) {} };
 
-// 選んだモードは覚えておく。開くたびに選び直させない
-// お試し用。全部のステージを開けて回れるようにする（記録のランプは正直なまま）
-const UKEY = "ipcalc2-unlock";
-const loadUnlock = () => { try { return localStorage.getItem(UKEY) === "1"; } catch (e) { return false; } };
-const saveUnlock = (u) => { try { localStorage.setItem(UKEY, u ? "1" : "0"); } catch (e) {} };
-
 // 名前とメール。**書き出すときだけ使う。**端末の中に置くだけで、どこへも送らない
 const MEKEY = "ipcalc2-me";
 const loadMe = () => { try { return JSON.parse(localStorage.getItem(MEKEY)) || { name: "", email: "" }; } catch (e) { return { name: "", email: "" }; } };
@@ -58,7 +52,6 @@ function nowIso() {
 const byId = (id) => STATIONS.find((s) => s.id === id);
 const isLit = (p, id) => !!(p[id] && p[id].lit);
 const isSolo = (p, id) => !!(p[id] && p[id].solo);
-const isOpen = (p, st) => st.need.every((n) => isLit(p, n));
 const buzz = (ms) => { try { navigator.vibrate && navigator.vibrate(ms); } catch (e) {} };
 const toTop = (y) => { try { window.scrollTo(0, y || 0); } catch (e) {} };
 const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -70,8 +63,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
    画面ぜんたいの切り替えをやめたのは、いま自分がどちらの世界にいるのかを
    覚えておかないといけなかったから。ボタンが2つ並んでいれば、覚えなくてよい。
    ========================================================================= */
-function Home({ progress, unlock, onUnlock, onStart, onExport }) {
-  const [blocked, setBlocked] = useState(null);
+function Home({ progress, onStart, onExport }) {
   const [pick, setPick] = useState(null);   // いま開いている札
   const [tip, setTip] = useState(null);     // コツを開いている札（札の開け閉めとは別）
   const doneT = STATIONS.filter((s) => isSolo(progress, s.id)).length;
@@ -90,14 +82,8 @@ function Home({ progress, unlock, onUnlock, onStart, onExport }) {
           // 基礎（1〜4）／試験レベル（5〜9）／仕上げ（10）で区切る
           const g = GROUPS.find((x) => x.at === s.id);
           const solo = isSolo(progress, s.id), lit = isLit(progress, s.id);
-          const open = unlock || isOpen(progress, s);
           // 仕上げだけは練習が無い。説明の1枚を見たら、そのままテストへ
           const hasDrill = s.drill !== false;
-          // テストは、練習でできてから。手順を知らないまま4択をやっても、
-          // 4回に1回当たるだけで記録が汚れる。
-          // **練習が無いステージは、開いた時点でテストに入れる**
-          //（そうしないと lit にならないので、永久に開かない）
-          const canTest = unlock || lit || !hasDrill;
           return (
             <div key={s.id}>
               {g && (
@@ -112,13 +98,15 @@ function Home({ progress, unlock, onUnlock, onStart, onExport }) {
               {i > 0 && !g && <div className="link" />}
               {/* はじめは札だけ。押した札にだけ、2つのボタンが出る。
                   7ステージ分14個のボタンが最初から並んでいると、どこを見ればいいのか分からなくなる */}
-              <div className={"tile" + (open ? "" : " locked") + (lit ? " lit" : "") + (solo ? " solo" : "")
+              {/* **鍵は無い。**どのステージも、練習もテストも、いつでも押せる。
+                  ランプは「まだ（○）」と「練習ができた（●）」の2つだけ */}
+              <div className={"tile" + (lit ? " lit" : "") + (solo ? " solo" : "")
                 + (pick === s.id ? " pick" : "")}>
                 {/* **バッジは、名前の押しどころの外に出す。**
                     ボタンの中にボタンは置けない（押しどころが二重になる） */}
                 <div className="t-top">
-                  <button className="t-h" onClick={() => { setPick(pick === s.id ? null : s.id); setBlocked(null); }}>
-                    <span className="lamp">{open ? (lit ? "●" : "○") : "🔒"}</span>
+                  <button className="t-h" onClick={() => setPick(pick === s.id ? null : s.id)}>
+                    <span className="lamp">{lit ? "●" : "○"}</span>
                     <span className="t-b">
                       <span className="t-name">{s.no}　{s.name}</span>
                       <span className="t-ex">{s.ex}</span>
@@ -127,18 +115,17 @@ function Home({ progress, unlock, onUnlock, onStart, onExport }) {
                   {/* バッジの置き場。テストに合格するまでは空の枠のまま */}
                   <span className={"slot" + (solo ? " got" : "")}>{solo ? "🏅" : ""}</span>
                 </div>
-                {/* 計算を楽にする方法。**そのステージが開いてから出す。**鍵のうちに中身を見せない。
-                    札の開け閉めとは別に動く（練習に入らずに、ここだけ読める）。
+                {/* 計算を楽にする方法。札の開け閉めとは別に動く（練習に入らずに、ここだけ読める）。
                     名前の下の行に置く。バッジの左に並べると、名前の入る幅が半分以下になる */}
-                {s.tip && open && (
+                {s.tip && (
                   <button className={"t-tip" + (tip === s.id ? " on" : "")}
                     onClick={() => setTip(tip === s.id ? null : s.id)}>
                     <span>{s.tip.label}</span>
                     <span className="t-tip-m">{tip === s.id ? "−" : "＋"}</span>
                   </button>
                 )}
-                {tip === s.id && s.tip && open && <TipBody tip={s.tip} />}
-                {pick === s.id && open && (
+                {tip === s.id && s.tip && <TipBody tip={s.tip} />}
+                {pick === s.id && (
                   /* 仕上げは練習が無いので、入口は1つだけ。
                      押すと説明の1枚（本番で聞かれる8つの形）が出て、その下がテストへの入口になる */
                   <div className="t-go">
@@ -146,31 +133,18 @@ function Home({ progress, unlock, onUnlock, onStart, onExport }) {
                       {hasDrill ? "練習をする" : "はじめる"}
                     </button>
                     {hasDrill && (
-                      <button className={"go" + (canTest ? "" : " off")}
-                        onClick={() => (canTest ? onStart(s.id, true) : setBlocked(blocked === s.id ? null : s.id))}>
-                        テストをする
-                      </button>
+                      <button className="go" onClick={() => onStart(s.id, true)}>テストをする</button>
                     )}
                   </div>
                 )}
               </div>
-              {pick === s.id && !open && (
-                <div className="blocked">{s.need.map((n) => byId(n).name).join(" と ")} ができると開きます</div>
-              )}
-              {blocked === s.id && open && (
-                <div className="blocked">先に練習でできると、テストが開きます</div>
-              )}
             </div>
           );
         })}
       </div>
 
       <div className="foot">○ まだ　　● 練習ができた　　🏅 バッジ（テストで9割）</div>
-      {/* お試し。鍵を外しても、できたかどうかの記録はそのまま */}
-      <button className={"unlock" + (unlock ? " on" : "")} onClick={() => onUnlock(!unlock)}>
-        {unlock ? "鍵をかけ直す" : "全部開く（お試し）"}
-      </button>
-      {/* いちばん下。**ふだんは使わないもの**なので、お試しの下に置く */}
+      {/* いちばん下。**ふだんは使わないもの**なので、ここに置く */}
       <button className="unlock" onClick={onExport}>学習の記録を書き出す</button>
     </div>
   );
@@ -1723,7 +1697,6 @@ export default function App() {
   const [plan, setPlan] = useState(null);
   const [res, setRes] = useState(null);
   const [runId, setRunId] = useState(0);
-  const [unlock, setUnlock] = useState(loadUnlock); // お試しで全部開ける
   const [sheetOf, setSheetOf] = useState(null);     // いま開いている練習の1枚
   const homeY = useRef(0);
 
@@ -1796,8 +1769,7 @@ export default function App() {
     <>
       <style>{CSS}</style>
       {screen === "home" && (
-        <Home progress={progress} unlock={unlock}
-          onUnlock={(u) => { setUnlock(u); saveUnlock(u); }} onStart={start}
+        <Home progress={progress} onStart={start}
           onExport={() => { homeY.current = window.scrollY; setScreen("export"); }} />
       )}
       {screen === "export" && <ExportScreen onHome={() => setScreen("home")} />}
@@ -1878,7 +1850,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   background:var(--bg1);border:1px solid var(--bg-tile);border-radius:12px;padding:12px 14px;transition:.15s}
 .tile.lit{border-color:var(--green-a);background:var(--lit-bg)}
 .tile.solo{border-color:var(--gold-a);background:var(--solo-bg)}
-.tile.locked{opacity:.5}
 .lamp{font-size:var(--f4);color:var(--ink3);flex:0 0 auto;width:22px;text-align:center}
 .tile.lit .lamp{color:var(--green-t)}
 .tile.solo .lamp{color:var(--gold)}
@@ -1886,7 +1857,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .t-name{display:block;font-size:var(--f3);font-weight:700}
 .t-ex{display:block;font-size:var(--f1);color:var(--blue-t);margin-top:4px;
   font-family:ui-monospace,Menlo,monospace;word-break:break-all}
-.blocked{font-size:var(--f1);color:var(--gold);text-align:center;padding:8px 0}
 /* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
    枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
    閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
@@ -2130,10 +2100,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .t-go{display:flex;gap:8px;margin-top:10px}
 .go{flex:1;min-height:44px;padding:10px 6px;border:1px solid var(--line);border-radius:10px;
   background:var(--bg);font-size:var(--f3);font-weight:700;color:var(--ink)}
-.go.off{color:var(--ink3);border-style:dashed}
 .unlock{display:block;margin:14px auto 0;padding:10px 16px;min-height:44px;font-size:var(--f2);
   color:var(--ink2);border:1px solid var(--line);border-radius:99px}
-.unlock.on{border-color:var(--blue);color:var(--blue-t)}
 .split{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
 .sp-c.blank{border-style:dashed;background:none}
@@ -2156,7 +2124,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 名前と数を同じ行に置くと折り返して崩れるので、縦に積む */
 .d-r.col{display:block}
 .d-r.col b{display:block;margin-top:2px;text-align:left}
-.sp-c.off{color:var(--ink3)}
 .sp-c.sp-c.zero{border-color:var(--blue);color:var(--blue-t)}
 .sp-c.sp-lab i{display:block;font-style:normal;color:var(--ink2);font-size:var(--f1);margin-top:2px}
 .sp-lab{font-size:var(--f1);color:var(--ink2);text-align:right}

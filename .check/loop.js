@@ -1,6 +1,6 @@
 /* 一周する道すじを見る。**ここが通らないと、アプリとして成立していない。**
- *   まっさら → ステージ1だけ開いている（あとは鍵）
- *   練習を5問ぜんぶ解く → ● が付く → 次のステージの鍵が外れる
+ *   まっさら → **10ステージとも開いている（鍵は無い）。**いきなりテストにも入れる
+ *   練習を5問ぜんぶ解く → ● が付く
  *   テストを10問ぜんぶ解く → 🏅 が付く
  *   わざと外すと、その場に手順が出る
  *
@@ -63,30 +63,35 @@ async function toHome(h) {
 (async () => {
   const why = [];
 
-  /* ① まっさら。ステージ1だけ開いていて、あとは鍵 */
+  /* ① まっさら。**鍵は無い。**10ステージとも ○ で、どれも押すと2つの入口が出る */
   {
     const h = open(null); await wait(150);
     const lamps = h.$$(".tile .lamp").map((e) => e.textContent);
-    if (lamps[0] !== "○") why.push(`まっさら: ステージ1が開いていない（${lamps[0]}）`);
-    if (lamps.slice(1).some((x) => x !== "🔒")) why.push(`まっさら: 2つ目から先に鍵がかかっていない（${lamps.join("")}）`);
-    // 鍵の札を押すと、何ができれば開くのかが出る
-    const t2 = h.$$(".tile")[1];
-    h.click(t2.querySelector(".t-h")); await wait(80);
-    if (!h.$(".blocked")) why.push("鍵の札を押しても、開く条件が出ない");
-    console.log(`  ① まっさら      ${lamps.join("")}   条件の案内:${h.$(".blocked") ? "出る" : "出ない"}`);
+    if (lamps.length !== STATIONS.length) why.push(`札が ${lamps.length} 枚`);
+    if (lamps.some((x) => x !== "○")) why.push(`まっさらなのに ○ でない札がある（${lamps.join("")}）`);
+    if (h.$$(".tile.locked").length) why.push("鍵のかかった札が残っている");
+    // まっさらでも、最後のステージから始められる（練習もテストも押せる）
+    const last = h.$$(".tile")[STATIONS.length - 1];
+    h.click(last.querySelector(".t-h")); await wait(80);
+    const go = [...last.querySelectorAll(".t-go .go")].map((b) => b.textContent);
+    if (!go.length) why.push("まっさらだと、最後のステージの入口が出ない");
+    console.log(`  ① まっさら      ${lamps.join("")}   最後のステージの入口:${go.join("/") || "無し"}`);
 
-    /* コツのボタン。**鍵のうちは出さない。**中身を先に見せないため */
-    if (h.$$(".t-tip").length) why.push("まっさら（ステージ1しか開いていない）なのにコツのボタンが出ている");
-    console.log(`  ①' コツのボタン  鍵のうちは出ない:${h.$$(".t-tip").length ? "NG" : "OK"}`);
+    // 1つ目のステージも、練習を1回もやらずにテストへ入れる
+    const t1 = h.$$(".tile")[0];
+    h.click(t1.querySelector(".t-h")); await wait(80);
+    const go1 = [...t1.querySelectorAll(".t-go .go")].map((b) => b.textContent);
+    if (go1.join("/") !== "練習をする/テストをする") why.push(`ステージ1の入口が ${go1.join("/")}`);
+    h.click([...t1.querySelectorAll(".t-go .go")][1]); await wait(200);
+    if (!h.$(".play")) why.push("まっさらなのに、テストに入れない");
+    console.log(`  ①' いきなりテスト  入口:${go1.join("/")}   入れる:${h.$(".play") ? "OK" : "NG"}`);
   }
 
-  /* ①'' コツは、そのステージが開いてから、札の中で開く。
-     置き場所（バッジの左）も見る。**押しどころが二重になっていないか**も見る */
+  /* ①'' コツは、札の中で開く。**押しどころが二重になっていないか**も見る */
   {
     const ts = STATIONS.filter((s) => s.tip);
     if (!ts.length) why.push("コツを持つステージが gen.js に1つも無い");
-    const prog = {}; for (const s of STATIONS) prog[s.id] = { seen: 10, correct: 10, lit: true, solo: false };
-    const h = open(prog); await wait(150);
+    const h = open(null); await wait(150);
     const btns = h.$$(".t-tip");
     if (btns.length !== ts.length) why.push(`コツのボタンが ${btns.length} 個（gen.js では ${ts.length} 個）`);
     for (const st of ts) {
@@ -110,7 +115,7 @@ async function toHome(h) {
       if (card.querySelector(".tipb-b")) why.push(`${st.name}: もう一度押しても閉じない`);
     }
     if (h.errs.length) why.push(`画面の例外: ${h.errs[0]}`);
-    console.log(`  ①'' コツのボタン  ${btns.length}個   バッジの左   押すと札の中で開く:${why.length ? "NG" : "OK"}`);
+    console.log(`  ①'' コツのボタン  ${btns.length}個   名前の下の行   押すと札の中で開く:${why.length ? "NG" : "OK"}`);
   }
 
   /* ② 練習を5問。● が付いて、次のステージの鍵が外れる */
@@ -131,8 +136,9 @@ async function toHome(h) {
     await toHome(h);
     const lamps = h.$$(".tile .lamp").map((e) => e.textContent);
     if (lamps[0] !== "●") why.push(`練習を全問正解しても ● が付かない（${lamps[0]}／${score}）`);
-    if (lamps[1] !== "○") why.push(`次のステージの鍵が外れない（${lamps[1]}）`);
-    console.log(`  ② 練習5問      ${score}  → ${lamps.slice(0, 2).join("")}（次のステージが開く）`);
+    // 鍵は無いので、ほかの札は ○ のまま（練習しても勝手に印は付かない）
+    if (lamps.slice(1).some((x) => x !== "○")) why.push(`ほかの札の印が変わっている（${lamps.join("")}）`);
+    console.log(`  ② 練習5問      ${score}  → ${lamps.join("")}`);
   }
 
   /* ③ テストを10問。🏅 が付く */
@@ -181,6 +187,6 @@ async function toHome(h) {
   }
 
   for (const m of why) console.log("      ↳ " + m);
-  console.log(why.length ? "✗ 一周する道すじに問題" : "✓ 一周する道すじ：鍵 → 練習で ● → 次が開く → テストで 🏅 → 外すと ✕ と答え");
+  console.log(why.length ? "✗ 一周する道すじに問題" : "✓ 一周する道すじ：鍵なしで全部開く → 練習で ● → テストで 🏅 → 外すと ✕ と答え");
   if (why.length) process.exit(1);
 })();

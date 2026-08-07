@@ -43,22 +43,6 @@ const save = p => {
   } catch (e) {}
 };
 
-// 選んだモードは覚えておく。開くたびに選び直させない
-// お試し用。全部のステージを開けて回れるようにする（記録のランプは正直なまま）
-const UKEY = "ipcalc2-unlock";
-const loadUnlock = () => {
-  try {
-    return localStorage.getItem(UKEY) === "1";
-  } catch (e) {
-    return false;
-  }
-};
-const saveUnlock = u => {
-  try {
-    localStorage.setItem(UKEY, u ? "1" : "0");
-  } catch (e) {}
-};
-
 // 名前とメール。**書き出すときだけ使う。**端末の中に置くだけで、どこへも送らない
 const MEKEY = "ipcalc2-me";
 const loadMe = () => {
@@ -91,7 +75,6 @@ function nowIso() {
 const byId = id => STATIONS.find(s => s.id === id);
 const isLit = (p, id) => !!(p[id] && p[id].lit);
 const isSolo = (p, id) => !!(p[id] && p[id].solo);
-const isOpen = (p, st) => st.need.every(n => isLit(p, n));
 const buzz = ms => {
   try {
     navigator.vibrate && navigator.vibrate(ms);
@@ -113,12 +96,9 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
    ========================================================================= */
 function Home({
   progress,
-  unlock,
-  onUnlock,
   onStart,
   onExport
 }) {
-  const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null); // いま開いている札
   const [tip, setTip] = useState(null); // コツを開いている札（札の開け閉めとは別）
   const doneT = STATIONS.filter(s => isSolo(progress, s.id)).length;
@@ -145,14 +125,8 @@ function Home({
     const g = GROUPS.find(x => x.at === s.id);
     const solo = isSolo(progress, s.id),
       lit = isLit(progress, s.id);
-    const open = unlock || isOpen(progress, s);
     // 仕上げだけは練習が無い。説明の1枚を見たら、そのままテストへ
     const hasDrill = s.drill !== false;
-    // テストは、練習でできてから。手順を知らないまま4択をやっても、
-    // 4回に1回当たるだけで記録が汚れる。
-    // **練習が無いステージは、開いた時点でテストに入れる**
-    //（そうしないと lit にならないので、永久に開かない）
-    const canTest = unlock || lit || !hasDrill;
     return /*#__PURE__*/React.createElement("div", {
       key: s.id
     }, g && /*#__PURE__*/React.createElement("div", {
@@ -166,18 +140,15 @@ function Home({
     }, g.note)), i > 0 && !g && /*#__PURE__*/React.createElement("div", {
       className: "link"
     }), /*#__PURE__*/React.createElement("div", {
-      className: "tile" + (open ? "" : " locked") + (lit ? " lit" : "") + (solo ? " solo" : "") + (pick === s.id ? " pick" : "")
+      className: "tile" + (lit ? " lit" : "") + (solo ? " solo" : "") + (pick === s.id ? " pick" : "")
     }, /*#__PURE__*/React.createElement("div", {
       className: "t-top"
     }, /*#__PURE__*/React.createElement("button", {
       className: "t-h",
-      onClick: () => {
-        setPick(pick === s.id ? null : s.id);
-        setBlocked(null);
-      }
+      onClick: () => setPick(pick === s.id ? null : s.id)
     }, /*#__PURE__*/React.createElement("span", {
       className: "lamp"
-    }, open ? lit ? "●" : "○" : "🔒"), /*#__PURE__*/React.createElement("span", {
+    }, lit ? "●" : "○"), /*#__PURE__*/React.createElement("span", {
       className: "t-b"
     }, /*#__PURE__*/React.createElement("span", {
       className: "t-name"
@@ -185,14 +156,14 @@ function Home({
       className: "t-ex"
     }, s.ex))), /*#__PURE__*/React.createElement("span", {
       className: "slot" + (solo ? " got" : "")
-    }, solo ? "🏅" : "")), s.tip && open && /*#__PURE__*/React.createElement("button", {
+    }, solo ? "🏅" : "")), s.tip && /*#__PURE__*/React.createElement("button", {
       className: "t-tip" + (tip === s.id ? " on" : ""),
       onClick: () => setTip(tip === s.id ? null : s.id)
     }, /*#__PURE__*/React.createElement("span", null, s.tip.label), /*#__PURE__*/React.createElement("span", {
       className: "t-tip-m"
-    }, tip === s.id ? "−" : "＋")), tip === s.id && s.tip && open && /*#__PURE__*/React.createElement(TipBody, {
+    }, tip === s.id ? "−" : "＋")), tip === s.id && s.tip && /*#__PURE__*/React.createElement(TipBody, {
       tip: s.tip
-    }), pick === s.id && open &&
+    }), pick === s.id &&
     /*#__PURE__*/
     /* 仕上げは練習が無いので、入口は1つだけ。
        押すと説明の1枚（本番で聞かれる8つの形）が出て、その下がテストへの入口になる */
@@ -202,19 +173,12 @@ function Home({
       className: "go",
       onClick: () => onStart(s.id, null)
     }, hasDrill ? "練習をする" : "はじめる"), hasDrill && /*#__PURE__*/React.createElement("button", {
-      className: "go" + (canTest ? "" : " off"),
-      onClick: () => canTest ? onStart(s.id, true) : setBlocked(blocked === s.id ? null : s.id)
-    }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B"))), pick === s.id && !open && /*#__PURE__*/React.createElement("div", {
-      className: "blocked"
-    }, s.need.map(n => byId(n).name).join(" と "), " \u304C\u3067\u304D\u308B\u3068\u958B\u304D\u307E\u3059"), blocked === s.id && open && /*#__PURE__*/React.createElement("div", {
-      className: "blocked"
-    }, "\u5148\u306B\u7DF4\u7FD2\u3067\u3067\u304D\u308B\u3068\u3001\u30C6\u30B9\u30C8\u304C\u958B\u304D\u307E\u3059"));
+      className: "go",
+      onClick: () => onStart(s.id, true)
+    }, "\u30C6\u30B9\u30C8\u3092\u3059\u308B"))));
   })), /*#__PURE__*/React.createElement("div", {
     className: "foot"
   }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u304C\u3067\u304D\u305F\u3000\u3000\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
-    className: "unlock" + (unlock ? " on" : ""),
-    onClick: () => onUnlock(!unlock)
-  }, unlock ? "鍵をかけ直す" : "全部開く（お試し）"), /*#__PURE__*/React.createElement("button", {
     className: "unlock",
     onClick: onExport
   }, "\u5B66\u7FD2\u306E\u8A18\u9332\u3092\u66F8\u304D\u51FA\u3059"));
@@ -2136,7 +2100,6 @@ function App() {
   const [plan, setPlan] = useState(null);
   const [res, setRes] = useState(null);
   const [runId, setRunId] = useState(0);
-  const [unlock, setUnlock] = useState(loadUnlock); // お試しで全部開ける
   const [sheetOf, setSheetOf] = useState(null); // いま開いている練習の1枚
   const homeY = useRef(0);
   useEffect(() => {
@@ -2257,11 +2220,6 @@ function App() {
   };
   return /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("style", null, CSS), screen === "home" && /*#__PURE__*/React.createElement(Home, {
     progress: progress,
-    unlock: unlock,
-    onUnlock: u => {
-      setUnlock(u);
-      saveUnlock(u);
-    },
     onStart: start,
     onExport: () => {
       homeY.current = window.scrollY;
@@ -2350,7 +2308,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   background:var(--bg1);border:1px solid var(--bg-tile);border-radius:12px;padding:12px 14px;transition:.15s}
 .tile.lit{border-color:var(--green-a);background:var(--lit-bg)}
 .tile.solo{border-color:var(--gold-a);background:var(--solo-bg)}
-.tile.locked{opacity:.5}
 .lamp{font-size:var(--f4);color:var(--ink3);flex:0 0 auto;width:22px;text-align:center}
 .tile.lit .lamp{color:var(--green-t)}
 .tile.solo .lamp{color:var(--gold)}
@@ -2358,7 +2315,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .t-name{display:block;font-size:var(--f3);font-weight:700}
 .t-ex{display:block;font-size:var(--f1);color:var(--blue-t);margin-top:4px;
   font-family:ui-monospace,Menlo,monospace;word-break:break-all}
-.blocked{font-size:var(--f1);color:var(--gold);text-align:center;padding:8px 0}
 /* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
    枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
    閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
@@ -2602,10 +2558,8 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .t-go{display:flex;gap:8px;margin-top:10px}
 .go{flex:1;min-height:44px;padding:10px 6px;border:1px solid var(--line);border-radius:10px;
   background:var(--bg);font-size:var(--f3);font-weight:700;color:var(--ink)}
-.go.off{color:var(--ink3);border-style:dashed}
 .unlock{display:block;margin:14px auto 0;padding:10px 16px;min-height:44px;font-size:var(--f2);
   color:var(--ink2);border:1px solid var(--line);border-radius:99px}
-.unlock.on{border-color:var(--blue);color:var(--blue-t)}
 .split{display:grid;grid-template-columns:44px 1fr;gap:6px;align-items:center}
 /* 行そのものを押す。押せる物の見た目（枠の太さ）は .sp-c とそろえる */
 .sp-c.blank{border-style:dashed;background:none}
@@ -2628,7 +2582,6 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 名前と数を同じ行に置くと折り返して崩れるので、縦に積む */
 .d-r.col{display:block}
 .d-r.col b{display:block;margin-top:2px;text-align:left}
-.sp-c.off{color:var(--ink3)}
 .sp-c.sp-c.zero{border-color:var(--blue);color:var(--blue-t)}
 .sp-c.sp-lab i{display:block;font-style:normal;color:var(--ink2);font-size:var(--f1);margin-top:2px}
 .sp-lab{font-size:var(--f1);color:var(--ink2);text-align:right}

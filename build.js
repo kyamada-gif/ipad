@@ -107,7 +107,6 @@ if (!jsx.includes("EXAMPLES[")) bad.push("画面: 覚える表（EXAMPLES）を1
 const INPUTS = ["pow", "sum", "sub", "split", "pick", "stack", "mask", "final", "table"];
 for (const s of STATIONS) {
   if (!EXAMPLES[s.id]) bad.push(`${s.id}: やり方（見本）が無い`);
-  for (const n of s.need) if (!STATIONS.some((x) => x.id === n)) bad.push(`${s.id}: 前提 ${n} が無い`);
   // 向きを指定して作れるか。**指定を無視して別の向きを返すと、
   //   「サブネットマスク → プレフィックス長」の見出しの下に逆向きの問題が出る**
   {
