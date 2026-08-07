@@ -1117,10 +1117,17 @@ function PickBoard({ q, value, onChange, locked, onSubmit }) {
         </>
       ) : (
         <>
-          <div className="sub">クラス{q.cls}（/{q.base} から）／ 必要なサブネット数 <b>{q.want}</b></div>
-          {/* 上の台数の向きと同じ言い方にする。同じ動作を2通りの言葉で言わない */}
+          <div className="sub">クラス{q.cls}（/{q.base} から）／ 必要なサブネット数 <b>{q.need}</b></div>
+          {/* **台数の向きと、同じ段・同じ言葉にする。**片方だけ ＋2 の段が無いと、
+              同じ手順なのに違う手順に見える */}
+          <div className="point">
+            借りた桁が<b>全部 0</b> のサブネットと、<b>全部 1</b> のサブネットは使いません。
+            だから、ほしい数に、その2つ分を足してから探します。
+          </div>
+          <div className="lead past">① 使えない2つ分を足します</div>
+          <div className="out"><span className="o-n">{q.need}個 ＋ 2 ＝ <b>{q.want}</b></span></div>
           <div className={"lead " + (w != null ? "past" : "now")}>
-            <b>{q.want} 以上</b>の数のうち、一番小さいものを押します
+            ② <b>{q.want} 以上</b>の数のうち、一番小さいものを押します
           </div>
           <div className="point">桁の重み表を、左へのばしただけです（2倍ずつ増えます）。数が大きいほど、たくさん分けられます</div>
         </>

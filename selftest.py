@@ -68,9 +68,10 @@ def verify(q):
         expect(q, f"/{ln}（{ipaddress.ip_network(f'0.0.0.0/{ln}').netmask}）")
 
     elif s == "S6":                                 # 個数 → マスク
-        # いまの試験の数え方（サブネットゼロも使える）＝ 2のn乗。教材の「+2」は使わない
+        # 借りた桁が全部 0 のサブネットと全部 1 のサブネットは使わない ＝ 2のn乗 − 2。
+        # だから必要な数に 2 を足してから探す（台数のときと同じ。教材の⑥どおり）
         base = int(re.search(r"/(\d+)", g(q, "使うアドレス")).group(1))
-        want = int(re.sub(r"[^0-9]", "", g(q, "必要なサブネット数")))
+        want = int(re.sub(r"[^0-9]", "", g(q, "必要なサブネット数"))) + 2
         b = 0
         while 2 ** b < want:
             b += 1

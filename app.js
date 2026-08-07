@@ -1330,9 +1330,17 @@ function PickBoard({
     className: "point"
   }, "\u6841\u306E\u91CD\u307F\u8868\u3092\u3001\u5DE6\u3078\u306E\u3070\u3057\u305F\u3060\u3051\u3067\u3059\uFF082\u500D\u305A\u3064\u5897\u3048\u307E\u3059\uFF09")) : /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "sub"
-  }, "\u30AF\u30E9\u30B9", q.cls, "\uFF08/", q.base, " \u304B\u3089\uFF09\uFF0F \u5FC5\u8981\u306A\u30B5\u30D6\u30CD\u30C3\u30C8\u6570 ", /*#__PURE__*/React.createElement("b", null, q.want)), /*#__PURE__*/React.createElement("div", {
+  }, "\u30AF\u30E9\u30B9", q.cls, "\uFF08/", q.base, " \u304B\u3089\uFF09\uFF0F \u5FC5\u8981\u306A\u30B5\u30D6\u30CD\u30C3\u30C8\u6570 ", /*#__PURE__*/React.createElement("b", null, q.need)), /*#__PURE__*/React.createElement("div", {
+    className: "point"
+  }, "\u501F\u308A\u305F\u6841\u304C", /*#__PURE__*/React.createElement("b", null, "\u5168\u90E8 0"), " \u306E\u30B5\u30D6\u30CD\u30C3\u30C8\u3068\u3001", /*#__PURE__*/React.createElement("b", null, "\u5168\u90E8 1"), " \u306E\u30B5\u30D6\u30CD\u30C3\u30C8\u306F\u4F7F\u3044\u307E\u305B\u3093\u3002 \u3060\u304B\u3089\u3001\u307B\u3057\u3044\u6570\u306B\u3001\u305D\u306E2\u3064\u5206\u3092\u8DB3\u3057\u3066\u304B\u3089\u63A2\u3057\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("div", {
+    className: "lead past"
+  }, "\u2460 \u4F7F\u3048\u306A\u30442\u3064\u5206\u3092\u8DB3\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "out"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "o-n"
+  }, q.need, "\u500B \uFF0B 2 \uFF1D ", /*#__PURE__*/React.createElement("b", null, q.want))), /*#__PURE__*/React.createElement("div", {
     className: "lead " + (w != null ? "past" : "now")
-  }, /*#__PURE__*/React.createElement("b", null, q.want, " \u4EE5\u4E0A"), "\u306E\u6570\u306E\u3046\u3061\u3001\u4E00\u756A\u5C0F\u3055\u3044\u3082\u306E\u3092\u62BC\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+  }, "\u2461 ", /*#__PURE__*/React.createElement("b", null, q.want, " \u4EE5\u4E0A"), "\u306E\u6570\u306E\u3046\u3061\u3001\u4E00\u756A\u5C0F\u3055\u3044\u3082\u306E\u3092\u62BC\u3057\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
     className: "point"
   }, "\u6841\u306E\u91CD\u307F\u8868\u3092\u3001\u5DE6\u3078\u306E\u3070\u3057\u305F\u3060\u3051\u3067\u3059\uFF082\u500D\u305A\u3064\u5897\u3048\u307E\u3059\uFF09\u3002\u6570\u304C\u5927\u304D\u3044\u307B\u3069\u3001\u305F\u304F\u3055\u3093\u5206\u3051\u3089\u308C\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "split"
