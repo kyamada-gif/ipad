@@ -40,15 +40,6 @@ const UKEY = "ipcalc2-unlock";
 const loadUnlock = () => { try { return localStorage.getItem(UKEY) === "1"; } catch (e) { return false; } };
 const saveUnlock = (u) => { try { localStorage.setItem(UKEY, u ? "1" : "0"); } catch (e) {} };
 
-/* ── 書き出し用の記録 ──────────────────────────────────────
-   `ipcalc2-progress` は**いまの状態**（開いたか・合格したか・最速）しか持たない。
-   seen と correct は練習とテストの合計なので、**そこからテストの点は取り出せない。**
-   だからテストを1回終えるごとに、この表に1行足す。**進み具合の表には触らない。** */
-const TKEY = "ipcalc2-tests";
-const loadTests = () => { try { return JSON.parse(localStorage.getItem(TKEY)) || []; } catch (e) { return []; } };
-const saveTests = (t) => { try { localStorage.setItem(TKEY, JSON.stringify(t)); } catch (e) {} };
-const TEST_MAX = 300;                    // 端末の中がいっぱいにならないよう、古いものから捨てる
-
 // 名前とメール。**書き出すときだけ使う。**端末の中に置くだけで、どこへも送らない
 const MEKEY = "ipcalc2-me";
 const loadMe = () => { try { return JSON.parse(localStorage.getItem(MEKEY)) || { name: "", email: "" }; } catch (e) { return { name: "", email: "" }; } };
@@ -236,7 +227,6 @@ function exportData(me) {
     exportedAt: nowIso(),
     stations: STATIONS.map((s) => ({ id: s.id, no: s.no, name: s.name })),
     progress,
-    tests: loadTests(),
   };
 }
 
@@ -246,7 +236,7 @@ function ExportScreen({ onHome }) {
   const data = exportData(me);
   const text = JSON.stringify(data, null, 2);
   const fname = `ipcalc2_${data.exportedAt.slice(0, 10)}.json`;
-  const nTest = data.tests.length;
+  const nLit = STATIONS.filter((s) => isLit(data.progress, s.id)).length;
   const nSolo = STATIONS.filter((s) => isSolo(data.progress, s.id)).length;
 
   const put = (k, v) => { const m = { ...me, [k]: v }; setMe(m); saveMe(m); setDone(null); };
@@ -281,12 +271,8 @@ function ExportScreen({ onHome }) {
 
       <Sec label="書き出す中身">
         <div className="ex-r"><i className="ex-n" /><span>ステージ</span><b>{STATIONS.length}</b></div>
+        <div className="ex-r"><i className="ex-n" /><span>練習ができた数</span><b>{nLit}</b></div>
         <div className="ex-r"><i className="ex-n" /><span>バッジを取った数</span><b>{nSolo}</b></div>
-        {/* 単位は名前のほうに置く。数のところは等幅なので、間が空いて読みにくい */}
-        <div className="ex-r"><i className="ex-n" /><span>テストを受けた回数</span><b>{nTest}</b></div>
-        <div className="ex-note">
-          ※ テストの1回ごとの記録は、この仕組みを入れたあとに受けた分だけです。
-        </div>
       </Sec>
 
       <Sec label="名前とメール">
@@ -385,10 +371,8 @@ function Play({ plan, onDone, onQuit }) {
     setJudged(ok); buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some((r) => r.idx === idx);
-    // kind …「どの型の問題か」。仕上げの8種類と、向きが2つあるステージを分けるために残す
     const rs = first
-      ? results.concat([{ idx, station: q.station, kind: q.goal || q.input, ok,
-        ms: Date.now() - startedAt.current, scored: item.scored }])
+      ? results.concat([{ idx, station: q.station, ok, ms: Date.now() - startedAt.current, scored: item.scored }])
       : results;
     if (first) setResults(rs);
   };
@@ -1802,28 +1786,6 @@ export default function App() {
       }
     }
     setProgress(next); save(next);
-
-    /* **テストを最後までやったときだけ、1行残す。**途中でやめた回は残さない
-       （何問中何問だったのかが言えないので、あとから読むと嘘になる）。
-       練習は残さない。ここに混ざると、見たいテストの行が埋もれる。 */
-    if (!quit && plan.test && scored.length) {
-      const byKind = {};
-      for (const r of scored) {
-        const k = r.kind || "?";
-        if (!byKind[k]) byKind[k] = [0, 0];
-        byKind[k][0] += r.ok ? 1 : 0;
-        byKind[k][1] += 1;
-      }
-      const rec = {
-        at: nowIso(), station: plan.station,
-        correct, total: scored.length,
-        passed: correct >= needOf(plan.test, plan.station),
-        avgMs, byKind,
-      };
-      const t = loadTests().concat([rec]);
-      saveTests(t.length > TEST_MAX ? t.slice(t.length - TEST_MAX) : t);
-    }
-
     if (quit) { setScreen("home"); return; }
     const k = plan.test ? "testBestMs" : "bestMs";
     setRes({ correct, total: scored.length, newly, newBest, hadBest, bestMs: (next[plan.station] || {})[k] });

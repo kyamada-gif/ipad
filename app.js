@@ -59,25 +59,6 @@ const saveUnlock = u => {
   } catch (e) {}
 };
 
-/* ── 書き出し用の記録 ──────────────────────────────────────
-   `ipcalc2-progress` は**いまの状態**（開いたか・合格したか・最速）しか持たない。
-   seen と correct は練習とテストの合計なので、**そこからテストの点は取り出せない。**
-   だからテストを1回終えるごとに、この表に1行足す。**進み具合の表には触らない。** */
-const TKEY = "ipcalc2-tests";
-const loadTests = () => {
-  try {
-    return JSON.parse(localStorage.getItem(TKEY)) || [];
-  } catch (e) {
-    return [];
-  }
-};
-const saveTests = t => {
-  try {
-    localStorage.setItem(TKEY, JSON.stringify(t));
-  } catch (e) {}
-};
-const TEST_MAX = 300; // 端末の中がいっぱいにならないよう、古いものから捨てる
-
 // 名前とメール。**書き出すときだけ使う。**端末の中に置くだけで、どこへも送らない
 const MEKEY = "ipcalc2-me";
 const loadMe = () => {
@@ -302,8 +283,7 @@ function exportData(me) {
       no: s.no,
       name: s.name
     })),
-    progress,
-    tests: loadTests()
+    progress
   };
 }
 function ExportScreen({
@@ -314,7 +294,7 @@ function ExportScreen({
   const data = exportData(me);
   const text = JSON.stringify(data, null, 2);
   const fname = `ipcalc2_${data.exportedAt.slice(0, 10)}.json`;
-  const nTest = data.tests.length;
+  const nLit = STATIONS.filter(s => isLit(data.progress, s.id)).length;
   const nSolo = STATIONS.filter(s => isSolo(data.progress, s.id)).length;
   const put = (k, v) => {
     const m = {
@@ -375,13 +355,11 @@ function ExportScreen({
     className: "ex-r"
   }, /*#__PURE__*/React.createElement("i", {
     className: "ex-n"
-  }), /*#__PURE__*/React.createElement("span", null, "\u30D0\u30C3\u30B8\u3092\u53D6\u3063\u305F\u6570"), /*#__PURE__*/React.createElement("b", null, nSolo)), /*#__PURE__*/React.createElement("div", {
+  }), /*#__PURE__*/React.createElement("span", null, "\u7DF4\u7FD2\u304C\u3067\u304D\u305F\u6570"), /*#__PURE__*/React.createElement("b", null, nLit)), /*#__PURE__*/React.createElement("div", {
     className: "ex-r"
   }, /*#__PURE__*/React.createElement("i", {
     className: "ex-n"
-  }), /*#__PURE__*/React.createElement("span", null, "\u30C6\u30B9\u30C8\u3092\u53D7\u3051\u305F\u56DE\u6570"), /*#__PURE__*/React.createElement("b", null, nTest)), /*#__PURE__*/React.createElement("div", {
-    className: "ex-note"
-  }, "\u203B \u30C6\u30B9\u30C8\u306E1\u56DE\u3054\u3068\u306E\u8A18\u9332\u306F\u3001\u3053\u306E\u4ED5\u7D44\u307F\u3092\u5165\u308C\u305F\u3042\u3068\u306B\u53D7\u3051\u305F\u5206\u3060\u3051\u3067\u3059\u3002")), /*#__PURE__*/React.createElement(Sec, {
+  }), /*#__PURE__*/React.createElement("span", null, "\u30D0\u30C3\u30B8\u3092\u53D6\u3063\u305F\u6570"), /*#__PURE__*/React.createElement("b", null, nSolo))), /*#__PURE__*/React.createElement(Sec, {
     label: "\u540D\u524D\u3068\u30E1\u30FC\u30EB"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sec-b"
@@ -512,11 +490,9 @@ function Play({
     buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some(r => r.idx === idx);
-    // kind …「どの型の問題か」。仕上げの8種類と、向きが2つあるステージを分けるために残す
     const rs = first ? results.concat([{
       idx,
       station: q.station,
-      kind: q.goal || q.input,
       ok,
       ms: Date.now() - startedAt.current,
       scored: item.scored
@@ -2264,30 +2240,6 @@ function App() {
     }
     setProgress(next);
     save(next);
-
-    /* **テストを最後までやったときだけ、1行残す。**途中でやめた回は残さない
-       （何問中何問だったのかが言えないので、あとから読むと嘘になる）。
-       練習は残さない。ここに混ざると、見たいテストの行が埋もれる。 */
-    if (!quit && plan.test && scored.length) {
-      const byKind = {};
-      for (const r of scored) {
-        const k = r.kind || "?";
-        if (!byKind[k]) byKind[k] = [0, 0];
-        byKind[k][0] += r.ok ? 1 : 0;
-        byKind[k][1] += 1;
-      }
-      const rec = {
-        at: nowIso(),
-        station: plan.station,
-        correct,
-        total: scored.length,
-        passed: correct >= needOf(plan.test, plan.station),
-        avgMs,
-        byKind
-      };
-      const t = loadTests().concat([rec]);
-      saveTests(t.length > TEST_MAX ? t.slice(t.length - TEST_MAX) : t);
-    }
     if (quit) {
       setScreen("home");
       return;
