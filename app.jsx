@@ -40,6 +40,30 @@ const UKEY = "ipcalc2-unlock";
 const loadUnlock = () => { try { return localStorage.getItem(UKEY) === "1"; } catch (e) { return false; } };
 const saveUnlock = (u) => { try { localStorage.setItem(UKEY, u ? "1" : "0"); } catch (e) {} };
 
+/* ── 書き出し用の記録 ──────────────────────────────────────
+   `ipcalc2-progress` は**いまの状態**（開いたか・合格したか・最速）しか持たない。
+   seen と correct は練習とテストの合計なので、**そこからテストの点は取り出せない。**
+   だからテストを1回終えるごとに、この表に1行足す。**進み具合の表には触らない。** */
+const TKEY = "ipcalc2-tests";
+const loadTests = () => { try { return JSON.parse(localStorage.getItem(TKEY)) || []; } catch (e) { return []; } };
+const saveTests = (t) => { try { localStorage.setItem(TKEY, JSON.stringify(t)); } catch (e) {} };
+const TEST_MAX = 300;                    // 端末の中がいっぱいにならないよう、古いものから捨てる
+
+// 名前とメール。**書き出すときだけ使う。**端末の中に置くだけで、どこへも送らない
+const MEKEY = "ipcalc2-me";
+const loadMe = () => { try { return JSON.parse(localStorage.getItem(MEKEY)) || { name: "", email: "" }; } catch (e) { return { name: "", email: "" }; } };
+const saveMe = (m) => { try { localStorage.setItem(MEKEY, JSON.stringify(m)); } catch (e) {} };
+
+/** その端末の時計で「2026-08-07T15:40:12+09:00」の形にする。
+ *  UTC に直すと、受け取った側が何時にやったのか分からなくなる */
+function nowIso() {
+  const d = new Date(), z = -d.getTimezoneOffset();
+  const p = (n) => String(Math.floor(Math.abs(n))).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`
+    + `T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`
+    + `${z < 0 ? "-" : "+"}${p(z / 60)}:${p(z % 60)}`;
+}
+
 const byId = (id) => STATIONS.find((s) => s.id === id);
 const isLit = (p, id) => !!(p[id] && p[id].lit);
 const isSolo = (p, id) => !!(p[id] && p[id].solo);
@@ -55,7 +79,7 @@ const W8 = [128, 64, 32, 16, 8, 4, 2, 1];
    画面ぜんたいの切り替えをやめたのは、いま自分がどちらの世界にいるのかを
    覚えておかないといけなかったから。ボタンが2つ並んでいれば、覚えなくてよい。
    ========================================================================= */
-function Home({ progress, unlock, onUnlock, onStart }) {
+function Home({ progress, unlock, onUnlock, onStart, onExport }) {
   const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null);   // いま開いている札
   const [tip, setTip] = useState(null);     // コツを開いている札（札の開け閉めとは別）
@@ -155,6 +179,8 @@ function Home({ progress, unlock, onUnlock, onStart }) {
       <button className={"unlock" + (unlock ? " on" : "")} onClick={() => onUnlock(!unlock)}>
         {unlock ? "鍵をかけ直す" : "全部開く（お試し）"}
       </button>
+      {/* いちばん下。**ふだんは使わないもの**なので、お試しの下に置く */}
+      <button className="unlock" onClick={onExport}>学習の記録を書き出す</button>
     </div>
   );
 }
@@ -175,6 +201,98 @@ function TipBody({ tip }) {
           ))}
         </div>
       ))}
+    </div>
+  );
+}
+
+/* =========================================================================
+   学習の記録を書き出す
+   -------------------------------------------------------------------------
+   受け取った側が、ステージの並びも名前も知らないまま読めるようにする。
+   だから stations（id・番号・名前）も一緒に入れる。
+   ========================================================================= */
+/** 書き出す中身。**計算はここ1か所。**画面とファイルで中身が違う、を起こさない。 */
+function exportData(me) {
+  return {
+    app: "ipcalc2",
+    name: me.name || "",
+    email: me.email || "",
+    exportedAt: nowIso(),
+    stations: STATIONS.map((s) => ({ id: s.id, no: s.no, name: s.name })),
+    progress: load(),
+    tests: loadTests(),
+  };
+}
+
+function ExportScreen({ onHome }) {
+  const [me, setMe] = useState(loadMe);
+  const [done, setDone] = useState(null);          // 何をしたか。押したあとの1行
+  const data = exportData(me);
+  const text = JSON.stringify(data, null, 2);
+  const fname = `ipcalc2_${data.exportedAt.slice(0, 10)}.json`;
+  const nTest = data.tests.length;
+  const nSolo = STATIONS.filter((s) => isSolo(data.progress, s.id)).length;
+
+  const put = (k, v) => { const m = { ...me, [k]: v }; setMe(m); saveMe(m); setDone(null); };
+
+  /** ファイルに保存。端末の中で作って、そのまま渡すだけ（どこへも送らない） */
+  const toFile = () => {
+    try {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+      a.download = fname;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      setDone(`${fname} を保存しました`);
+    } catch (e) { setDone("この画面では保存できません。下の文字を選んでコピーしてください"); }
+  };
+
+  const toClip = () => {
+    try {
+      navigator.clipboard.writeText(text)
+        .then(() => setDone("コピーしました"))
+        .catch(() => setDone("コピーできません。下の文字を選んでコピーしてください"));
+    } catch (e) { setDone("コピーできません。下の文字を選んでコピーしてください"); }
+  };
+
+  return (
+    <div className="wrap sheet-p">
+      <div className="topbar"><button className="x" onClick={onHome}>✕</button></div>
+      <div className="mkind">学習の記録</div>
+      <div className="mtitle">記録を書き出す</div>
+      <div className="msub2">この端末の中にある記録を、ファイル1つにまとめます</div>
+      <div className="rule" />
+
+      <Sec label="書き出す中身">
+        <div className="ex-r"><i className="ex-n" /><span>ステージ</span><b>{STATIONS.length}</b></div>
+        <div className="ex-r"><i className="ex-n" /><span>バッジを取った数</span><b>{nSolo}</b></div>
+        {/* 単位は名前のほうに置く。数のところは等幅なので、間が空いて読みにくい */}
+        <div className="ex-r"><i className="ex-n" /><span>テストを受けた回数</span><b>{nTest}</b></div>
+        <div className="ex-note">
+          ※ テストの1回ごとの記録は、この仕組みを入れたあとに受けた分だけです。
+        </div>
+      </Sec>
+
+      <Sec label="名前とメール">
+        <div className="sec-b">入れた内容はこの端末の中だけに残ります。次に開いたときは、そのまま出ます。</div>
+        <label className="fld"><span>名前</span>
+          <input className="fld-i" type="text" value={me.name} placeholder="山田太郎"
+            onChange={(e) => put("name", e.target.value)} /></label>
+        <label className="fld"><span>メール</span>
+          <input className="fld-i" type="email" value={me.email} placeholder="yamada@example.com"
+            onChange={(e) => put("email", e.target.value)} /></label>
+      </Sec>
+
+      <Sec label="書き出す">
+        <div className="t-go">
+          <button className="go" onClick={toFile}>ファイルに保存</button>
+          <button className="go" onClick={toClip}>文字をコピー</button>
+        </div>
+        {done && <div className="exp-done">{done}</div>}
+        {/* うまく渡せないときの逃げ道。**選んで手でコピーできる形**も必ず置く */}
+        <div className="sec-b">うまくいかないときは、下の文字を選んでコピーしてください。</div>
+        <textarea className="exp-t" readOnly value={text} />
+      </Sec>
     </div>
   );
 }
@@ -251,8 +369,10 @@ function Play({ plan, onDone, onQuit }) {
     setJudged(ok); buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some((r) => r.idx === idx);
+    // kind …「どの型の問題か」。仕上げの8種類と、向きが2つあるステージを分けるために残す
     const rs = first
-      ? results.concat([{ idx, station: q.station, ok, ms: Date.now() - startedAt.current, scored: item.scored }])
+      ? results.concat([{ idx, station: q.station, kind: q.goal || q.input, ok,
+        ms: Date.now() - startedAt.current, scored: item.scored }])
       : results;
     if (first) setResults(rs);
   };
@@ -1666,6 +1786,28 @@ export default function App() {
       }
     }
     setProgress(next); save(next);
+
+    /* **テストを最後までやったときだけ、1行残す。**途中でやめた回は残さない
+       （何問中何問だったのかが言えないので、あとから読むと嘘になる）。
+       練習は残さない。ここに混ざると、見たいテストの行が埋もれる。 */
+    if (!quit && plan.test && scored.length) {
+      const byKind = {};
+      for (const r of scored) {
+        const k = r.kind || "?";
+        if (!byKind[k]) byKind[k] = [0, 0];
+        byKind[k][0] += r.ok ? 1 : 0;
+        byKind[k][1] += 1;
+      }
+      const rec = {
+        at: nowIso(), station: plan.station,
+        correct, total: scored.length,
+        passed: correct >= needOf(plan.test, plan.station),
+        avgMs, byKind,
+      };
+      const t = loadTests().concat([rec]);
+      saveTests(t.length > TEST_MAX ? t.slice(t.length - TEST_MAX) : t);
+    }
+
     if (quit) { setScreen("home"); return; }
     const k = plan.test ? "testBestMs" : "bestMs";
     setRes({ correct, total: scored.length, newly, newBest, hadBest, bestMs: (next[plan.station] || {})[k] });
@@ -1677,8 +1819,10 @@ export default function App() {
       <style>{CSS}</style>
       {screen === "home" && (
         <Home progress={progress} unlock={unlock}
-          onUnlock={(u) => { setUnlock(u); saveUnlock(u); }} onStart={start} />
+          onUnlock={(u) => { setUnlock(u); saveUnlock(u); }} onStart={start}
+          onExport={() => { homeY.current = window.scrollY; setScreen("export"); }} />
       )}
+      {screen === "export" && <ExportScreen onHome={() => setScreen("home")} />}
       {screen === "memo" && sheetOf && (
         <Memo key={sheetOf} station={sheetOf}
           onDrill={() => start(sheetOf, false)} onTest={() => start(sheetOf, true)}
@@ -1890,6 +2034,17 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   text-align:right;word-break:break-all}
 /* 注記。表の行にすると手順の1つに見えるので、外に出して薄くする */
 .ex-note{font-size:var(--f1);color:var(--ink2);line-height:1.7;margin-top:var(--s2)}
+/* 学習の記録を書き出す画面。**ここだけ、打ちこむ場所がある。**
+   枠があるもの＝押せるもの／打てるもの、という約束は同じ */
+.fld{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s2)}
+.fld span{width:56px;flex:0 0 auto;font-size:var(--f2);color:var(--ink2)}
+.fld-i{flex:1;min-width:0;min-height:44px;padding:0 var(--s3);
+  border:1px solid var(--line);border-radius:10px;background:var(--bg1);
+  font-size:var(--f3);color:var(--ink)}
+.exp-done{font-size:var(--f2);color:var(--green-t);line-height:1.7;margin-top:var(--s3)}
+.exp-t{width:100%;height:110px;margin-top:var(--s2);padding:var(--s3);
+  border:1px solid var(--line);border-radius:10px;background:var(--sunk);
+  font-size:var(--f1);color:var(--ink2);font-family:ui-monospace,Menlo,monospace}
 /* 式と答えのあいだをつなぐ1行 */
 .bridge{display:flex;flex-direction:column;align-items:center;gap:2px;margin:8px 0}
 .b-t{font-size:var(--f2);color:var(--ink2);text-align:center}

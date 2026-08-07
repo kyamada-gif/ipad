@@ -58,6 +58,55 @@ const saveUnlock = u => {
     localStorage.setItem(UKEY, u ? "1" : "0");
   } catch (e) {}
 };
+
+/* ── 書き出し用の記録 ──────────────────────────────────────
+   `ipcalc2-progress` は**いまの状態**（開いたか・合格したか・最速）しか持たない。
+   seen と correct は練習とテストの合計なので、**そこからテストの点は取り出せない。**
+   だからテストを1回終えるごとに、この表に1行足す。**進み具合の表には触らない。** */
+const TKEY = "ipcalc2-tests";
+const loadTests = () => {
+  try {
+    return JSON.parse(localStorage.getItem(TKEY)) || [];
+  } catch (e) {
+    return [];
+  }
+};
+const saveTests = t => {
+  try {
+    localStorage.setItem(TKEY, JSON.stringify(t));
+  } catch (e) {}
+};
+const TEST_MAX = 300; // 端末の中がいっぱいにならないよう、古いものから捨てる
+
+// 名前とメール。**書き出すときだけ使う。**端末の中に置くだけで、どこへも送らない
+const MEKEY = "ipcalc2-me";
+const loadMe = () => {
+  try {
+    return JSON.parse(localStorage.getItem(MEKEY)) || {
+      name: "",
+      email: ""
+    };
+  } catch (e) {
+    return {
+      name: "",
+      email: ""
+    };
+  }
+};
+const saveMe = m => {
+  try {
+    localStorage.setItem(MEKEY, JSON.stringify(m));
+  } catch (e) {}
+};
+
+/** その端末の時計で「2026-08-07T15:40:12+09:00」の形にする。
+ *  UTC に直すと、受け取った側が何時にやったのか分からなくなる */
+function nowIso() {
+  const d = new Date(),
+    z = -d.getTimezoneOffset();
+  const p = n => String(Math.floor(Math.abs(n))).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}` + `T${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}` + `${z < 0 ? "-" : "+"}${p(z / 60)}:${p(z % 60)}`;
+}
 const byId = id => STATIONS.find(s => s.id === id);
 const isLit = (p, id) => !!(p[id] && p[id].lit);
 const isSolo = (p, id) => !!(p[id] && p[id].solo);
@@ -85,7 +134,8 @@ function Home({
   progress,
   unlock,
   onUnlock,
-  onStart
+  onStart,
+  onExport
 }) {
   const [blocked, setBlocked] = useState(null);
   const [pick, setPick] = useState(null); // いま開いている札
@@ -183,7 +233,10 @@ function Home({
   }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u304C\u3067\u304D\u305F\u3000\u3000\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
     className: "unlock" + (unlock ? " on" : ""),
     onClick: () => onUnlock(!unlock)
-  }, unlock ? "鍵をかけ直す" : "全部開く（お試し）"));
+  }, unlock ? "鍵をかけ直す" : "全部開く（お試し）"), /*#__PURE__*/React.createElement("button", {
+    className: "unlock",
+    onClick: onExport
+  }, "\u5B66\u7FD2\u306E\u8A18\u9332\u3092\u66F8\u304D\u51FA\u3059"));
 }
 
 /** 札の中で開く「コツ」の中身。データは gen.js の STATIONS の tip。
@@ -209,6 +262,144 @@ function TipBody({
   }, /*#__PURE__*/React.createElement("b", null, k), /*#__PURE__*/React.createElement("i", {
     className: "tip-a"
   }, "\u2192"), /*#__PURE__*/React.createElement("span", null, v))))));
+}
+
+/* =========================================================================
+   学習の記録を書き出す
+   -------------------------------------------------------------------------
+   受け取った側が、ステージの並びも名前も知らないまま読めるようにする。
+   だから stations（id・番号・名前）も一緒に入れる。
+   ========================================================================= */
+/** 書き出す中身。**計算はここ1か所。**画面とファイルで中身が違う、を起こさない。 */
+function exportData(me) {
+  return {
+    app: "ipcalc2",
+    name: me.name || "",
+    email: me.email || "",
+    exportedAt: nowIso(),
+    stations: STATIONS.map(s => ({
+      id: s.id,
+      no: s.no,
+      name: s.name
+    })),
+    progress: load(),
+    tests: loadTests()
+  };
+}
+function ExportScreen({
+  onHome
+}) {
+  const [me, setMe] = useState(loadMe);
+  const [done, setDone] = useState(null); // 何をしたか。押したあとの1行
+  const data = exportData(me);
+  const text = JSON.stringify(data, null, 2);
+  const fname = `ipcalc2_${data.exportedAt.slice(0, 10)}.json`;
+  const nTest = data.tests.length;
+  const nSolo = STATIONS.filter(s => isSolo(data.progress, s.id)).length;
+  const put = (k, v) => {
+    const m = {
+      ...me,
+      [k]: v
+    };
+    setMe(m);
+    saveMe(m);
+    setDone(null);
+  };
+
+  /** ファイルに保存。端末の中で作って、そのまま渡すだけ（どこへも送らない） */
+  const toFile = () => {
+    try {
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(new Blob([text], {
+        type: "application/json"
+      }));
+      a.download = fname;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      setDone(`${fname} を保存しました`);
+    } catch (e) {
+      setDone("この画面では保存できません。下の文字を選んでコピーしてください");
+    }
+  };
+  const toClip = () => {
+    try {
+      navigator.clipboard.writeText(text).then(() => setDone("コピーしました")).catch(() => setDone("コピーできません。下の文字を選んでコピーしてください"));
+    } catch (e) {
+      setDone("コピーできません。下の文字を選んでコピーしてください");
+    }
+  };
+  return /*#__PURE__*/React.createElement("div", {
+    className: "wrap sheet-p"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "topbar"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "x",
+    onClick: onHome
+  }, "\u2715")), /*#__PURE__*/React.createElement("div", {
+    className: "mkind"
+  }, "\u5B66\u7FD2\u306E\u8A18\u9332"), /*#__PURE__*/React.createElement("div", {
+    className: "mtitle"
+  }, "\u8A18\u9332\u3092\u66F8\u304D\u51FA\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "msub2"
+  }, "\u3053\u306E\u7AEF\u672B\u306E\u4E2D\u306B\u3042\u308B\u8A18\u9332\u3092\u3001\u30D5\u30A1\u30A4\u30EB1\u3064\u306B\u307E\u3068\u3081\u307E\u3059"), /*#__PURE__*/React.createElement("div", {
+    className: "rule"
+  }), /*#__PURE__*/React.createElement(Sec, {
+    label: "\u66F8\u304D\u51FA\u3059\u4E2D\u8EAB"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "ex-r"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "ex-n"
+  }), /*#__PURE__*/React.createElement("span", null, "\u30B9\u30C6\u30FC\u30B8"), /*#__PURE__*/React.createElement("b", null, STATIONS.length)), /*#__PURE__*/React.createElement("div", {
+    className: "ex-r"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "ex-n"
+  }), /*#__PURE__*/React.createElement("span", null, "\u30D0\u30C3\u30B8\u3092\u53D6\u3063\u305F\u6570"), /*#__PURE__*/React.createElement("b", null, nSolo)), /*#__PURE__*/React.createElement("div", {
+    className: "ex-r"
+  }, /*#__PURE__*/React.createElement("i", {
+    className: "ex-n"
+  }), /*#__PURE__*/React.createElement("span", null, "\u30C6\u30B9\u30C8\u3092\u53D7\u3051\u305F\u56DE\u6570"), /*#__PURE__*/React.createElement("b", null, nTest)), /*#__PURE__*/React.createElement("div", {
+    className: "ex-note"
+  }, "\u203B \u30C6\u30B9\u30C8\u306E1\u56DE\u3054\u3068\u306E\u8A18\u9332\u306F\u3001\u3053\u306E\u4ED5\u7D44\u307F\u3092\u5165\u308C\u305F\u3042\u3068\u306B\u53D7\u3051\u305F\u5206\u3060\u3051\u3067\u3059\u3002")), /*#__PURE__*/React.createElement(Sec, {
+    label: "\u540D\u524D\u3068\u30E1\u30FC\u30EB"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "sec-b"
+  }, "\u5165\u308C\u305F\u5185\u5BB9\u306F\u3053\u306E\u7AEF\u672B\u306E\u4E2D\u3060\u3051\u306B\u6B8B\u308A\u307E\u3059\u3002\u6B21\u306B\u958B\u3044\u305F\u3068\u304D\u306F\u3001\u305D\u306E\u307E\u307E\u51FA\u307E\u3059\u3002"), /*#__PURE__*/React.createElement("label", {
+    className: "fld"
+  }, /*#__PURE__*/React.createElement("span", null, "\u540D\u524D"), /*#__PURE__*/React.createElement("input", {
+    className: "fld-i",
+    type: "text",
+    value: me.name,
+    placeholder: "\u5C71\u7530\u592A\u90CE",
+    onChange: e => put("name", e.target.value)
+  })), /*#__PURE__*/React.createElement("label", {
+    className: "fld"
+  }, /*#__PURE__*/React.createElement("span", null, "\u30E1\u30FC\u30EB"), /*#__PURE__*/React.createElement("input", {
+    className: "fld-i",
+    type: "email",
+    value: me.email,
+    placeholder: "yamada@example.com",
+    onChange: e => put("email", e.target.value)
+  }))), /*#__PURE__*/React.createElement(Sec, {
+    label: "\u66F8\u304D\u51FA\u3059"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "t-go"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "go",
+    onClick: toFile
+  }, "\u30D5\u30A1\u30A4\u30EB\u306B\u4FDD\u5B58"), /*#__PURE__*/React.createElement("button", {
+    className: "go",
+    onClick: toClip
+  }, "\u6587\u5B57\u3092\u30B3\u30D4\u30FC")), done && /*#__PURE__*/React.createElement("div", {
+    className: "exp-done"
+  }, done), /*#__PURE__*/React.createElement("div", {
+    className: "sec-b"
+  }, "\u3046\u307E\u304F\u3044\u304B\u306A\u3044\u3068\u304D\u306F\u3001\u4E0B\u306E\u6587\u5B57\u3092\u9078\u3093\u3067\u30B3\u30D4\u30FC\u3057\u3066\u304F\u3060\u3055\u3044\u3002"), /*#__PURE__*/React.createElement("textarea", {
+    className: "exp-t",
+    readOnly: true,
+    value: text
+  })));
 }
 
 /* =========================================================================
@@ -301,9 +492,11 @@ function Play({
     buzz(ok ? 30 : 60);
     // 採点は、その問題の**最初の答え**だけ
     const first = !results.some(r => r.idx === idx);
+    // kind …「どの型の問題か」。仕上げの8種類と、向きが2つあるステージを分けるために残す
     const rs = first ? results.concat([{
       idx,
       station: q.station,
+      kind: q.goal || q.input,
       ok,
       ms: Date.now() - startedAt.current,
       scored: item.scored
@@ -2051,6 +2244,30 @@ function App() {
     }
     setProgress(next);
     save(next);
+
+    /* **テストを最後までやったときだけ、1行残す。**途中でやめた回は残さない
+       （何問中何問だったのかが言えないので、あとから読むと嘘になる）。
+       練習は残さない。ここに混ざると、見たいテストの行が埋もれる。 */
+    if (!quit && plan.test && scored.length) {
+      const byKind = {};
+      for (const r of scored) {
+        const k = r.kind || "?";
+        if (!byKind[k]) byKind[k] = [0, 0];
+        byKind[k][0] += r.ok ? 1 : 0;
+        byKind[k][1] += 1;
+      }
+      const rec = {
+        at: nowIso(),
+        station: plan.station,
+        correct,
+        total: scored.length,
+        passed: correct >= needOf(plan.test, plan.station),
+        avgMs,
+        byKind
+      };
+      const t = loadTests().concat([rec]);
+      saveTests(t.length > TEST_MAX ? t.slice(t.length - TEST_MAX) : t);
+    }
     if (quit) {
       setScreen("home");
       return;
@@ -2073,7 +2290,13 @@ function App() {
       setUnlock(u);
       saveUnlock(u);
     },
-    onStart: start
+    onStart: start,
+    onExport: () => {
+      homeY.current = window.scrollY;
+      setScreen("export");
+    }
+  }), screen === "export" && /*#__PURE__*/React.createElement(ExportScreen, {
+    onHome: () => setScreen("home")
   }), screen === "memo" && sheetOf && /*#__PURE__*/React.createElement(Memo, {
     key: sheetOf,
     station: sheetOf,
@@ -2289,6 +2512,17 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
   text-align:right;word-break:break-all}
 /* 注記。表の行にすると手順の1つに見えるので、外に出して薄くする */
 .ex-note{font-size:var(--f1);color:var(--ink2);line-height:1.7;margin-top:var(--s2)}
+/* 学習の記録を書き出す画面。**ここだけ、打ちこむ場所がある。**
+   枠があるもの＝押せるもの／打てるもの、という約束は同じ */
+.fld{display:flex;align-items:center;gap:var(--s3);margin-top:var(--s2)}
+.fld span{width:56px;flex:0 0 auto;font-size:var(--f2);color:var(--ink2)}
+.fld-i{flex:1;min-width:0;min-height:44px;padding:0 var(--s3);
+  border:1px solid var(--line);border-radius:10px;background:var(--bg1);
+  font-size:var(--f3);color:var(--ink)}
+.exp-done{font-size:var(--f2);color:var(--green-t);line-height:1.7;margin-top:var(--s3)}
+.exp-t{width:100%;height:110px;margin-top:var(--s2);padding:var(--s3);
+  border:1px solid var(--line);border-radius:10px;background:var(--sunk);
+  font-size:var(--f1);color:var(--ink2);font-family:ui-monospace,Menlo,monospace}
 /* 式と答えのあいだをつなぐ1行 */
 .bridge{display:flex;flex-direction:column;align-items:center;gap:2px;margin:8px 0}
 .b-t{font-size:var(--f2);color:var(--ink2);text-align:center}
