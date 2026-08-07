@@ -152,12 +152,14 @@ function Home({
       className: "t-name"
     }, s.no, "\u3000", s.name), /*#__PURE__*/React.createElement("span", {
       className: "t-ex"
-    }, s.ex))), s.tip && open && /*#__PURE__*/React.createElement("button", {
+    }, s.ex))), /*#__PURE__*/React.createElement("span", {
+      className: "slot" + (solo ? " got" : "")
+    }, solo ? "🏅" : "")), s.tip && open && /*#__PURE__*/React.createElement("button", {
       className: "t-tip" + (tip === s.id ? " on" : ""),
       onClick: () => setTip(tip === s.id ? null : s.id)
-    }, s.tip.label), /*#__PURE__*/React.createElement("span", {
-      className: "slot" + (solo ? " got" : "")
-    }, solo ? "🏅" : "")), tip === s.id && s.tip && open && /*#__PURE__*/React.createElement(TipBody, {
+    }, /*#__PURE__*/React.createElement("span", null, s.tip.label), /*#__PURE__*/React.createElement("span", {
+      className: "t-tip-m"
+    }, tip === s.id ? "−" : "＋")), tip === s.id && s.tip && open && /*#__PURE__*/React.createElement(TipBody, {
       tip: s.tip
     }), pick === s.id && open &&
     /*#__PURE__*/
@@ -2379,11 +2381,14 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 /* 札の上の段。名前の押しどころ ／ コツ ／ バッジ。**押しどころは入れ子にしない** */
 .t-top{display:flex;align-items:center;gap:12px}
 .t-h{display:flex;align-items:center;gap:12px;flex:1;min-width:0;text-align:left;min-height:48px}
-/* コツ。**バッジと同じ大きさ**にして、その左に並べる。
+/* 計算を楽にする方法。**名前の下の行に、札の中で置く。**
+   バッジの左に並べると、9文字ぶんの幅を取って名前が潰れる。
    枠があるもの＝押せるもの。札の名前より弱くするため、細字の灰にする */
-.t-tip{flex:0 0 auto;width:44px;height:44px;border:1px solid var(--line);border-radius:10px;
-  font-size:var(--f2);color:var(--ink2)}
+.t-tip{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  width:100%;min-height:44px;margin-top:var(--s3);padding:0 var(--s3);text-align:left;
+  border:1px solid var(--line);border-radius:10px;font-size:var(--f2);color:var(--ink2)}
 .t-tip.on{border-color:var(--blue);background:var(--blue-bg);color:var(--blue-t)}
+.t-tip-m{font-size:var(--f3);flex:0 0 auto}
 .slot{flex:0 0 auto;width:44px;height:44px;border:1.5px dashed var(--line);border-radius:10px;
   display:flex;align-items:center;justify-content:center;font-size:var(--f5)}
 .slot.got{border-style:solid;border-color:var(--gold);background:var(--solo-bg)}

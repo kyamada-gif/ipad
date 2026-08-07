@@ -93,8 +93,10 @@ async function toHome(h) {
       const card = h.$$(".tile").find((t) => t.textContent.includes(st.name));
       const top = card.querySelector(".t-top");
       const kids = [...top.children].map((e) => e.className.split(" ")[0]);
-      // 名前の押しどころ → コツ → バッジ の順。バッジの左にいるか
-      if (kids.join(">") !== "t-h>t-tip>slot") why.push(`${st.name}: 上の段の並びが ${kids.join(">")}`);
+      // 上の段は 名前の押しどころ → バッジ。ボタンはその下の行
+      if (kids.join(">") !== "t-h>slot") why.push(`${st.name}: 上の段の並びが ${kids.join(">")}`);
+      const rows = [...card.children].map((e) => e.className.split(" ")[0]);
+      if (rows[0] !== "t-top" || rows[1] !== "t-tip") why.push(`${st.name}: 札の中の並びが ${rows.join(">")}`);
       // 押しどころの入れ子（ボタンの中のボタン）は、押しても反応しない場所を作る
       if (card.querySelector("button button")) why.push(`${st.name}: 押しどころが入れ子になっている`);
       const b = card.querySelector(".t-tip");
