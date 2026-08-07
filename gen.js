@@ -120,6 +120,12 @@ function splitOut(ip, oct, cut, goal) {
   };
 }
 
+/** サブネットマスクの、オクテットごとの 1 の数。255→8 240→4 0→0。
+ *  プレフィックス長は、この4つを足した数そのもの。**画面でも手順でも、これを見せる。** */
+function onesPerOctet(mask) {
+  return String(mask).split(".").map((o) => Number(o).toString(2).replace(/0/g, "").length);
+}
+
 /** マスクのステージの盤。full = 255 にした数（左から）、bits = そのつぎの並びの 1 と 0。 */
 function maskBoardOut(full, bits, goal) {
   const W = [128, 64, 32, 16, 8, 4, 2, 1];
@@ -128,7 +134,8 @@ function maskBoardOut(full, bits, goal) {
   const len = full * 8 + cut;
   const m = [0, 1, 2, 3].map((i) => (i < full ? 255 : i === full ? (cut === 0 ? 0 : 256 - Math.pow(2, 8 - cut)) : 0));
   const mask = m.join(".");
-  return { len, mask, out: goal === "toLen" ? `/${len}` : mask };
+  // オクテットごとの 1 の数。足すと len になる ＝ プレフィックス長の出どころ
+  return { len, mask, ones: onesPerOctet(mask), out: goal === "toLen" ? `/${len}` : mask };
 }
 
 /** 3ステージ・4ステージの③。押した 1 と 0 から、そのアドレスを出す。
@@ -403,11 +410,23 @@ GEN.S8 = (ease, want) => {
     input: "mask", goal,
     board: { len, rest },        // rest = 8 で区切ったときの 余り
     answer: goal === "toMask" ? mask : `/${len}`,
-    steps: [
+    /* **手順は、問われた向きに合わせる。**
+       前は toMask の手順しか無く、マスク → プレフィックス長 の向きでも
+       「/28 なら 1 が 28個」から始めていた。**答えの 28 から逆算していたので、
+       28 がどこから出てきたのかを1つも言えていなかった。**
+       この向きでは、オクテットごとの 1 の数を数えて足す道すじにする。 */
+    steps: goal === "toMask" ? [
       { t: "/ の後ろの数は、左から並ぶ 1 の数", v: `/${len} なら 1 が ${len} 個` },
       { t: "まず 8 で区切る", v: `${len} ÷ 8 = ${full} 余り ${rest}` },
       { t: rest ? "余りは、上の桁から 1 にする" : "余りが無いので、残りは 0", v: mask },
-      { t: "答え", v: goal === "toMask" ? mask : `/${len}` },
+      { t: "答え", v: mask },
+    ] : [
+      { t: "255 は 1 が 8個", v: `255 が ${full}つ で ${full * 8}個` },
+      rest
+        ? { t: `255 でない ${mask.split(".")[full]} を 1 と 0 に`, v: `${bin8(Number(mask.split(".")[full]))} で 1 が ${rest}個` }
+        : { t: "残りのオクテットは 0", v: "1 は 0個" },
+      { t: "オクテットごとの 1 の数を足す", v: `${onesPerOctet(mask).join(" ＋ ")} ＝ ${len}` },
+      { t: "答え", v: `/${len}` },
     ],
     tip: null,
   };
@@ -1006,6 +1025,6 @@ function makeQuestion(stationId, ease, test, goal, steps) {
 }
 
 if (typeof module !== "undefined" && module.exports) {
-  module.exports = { STATIONS, GROUPS, EXAMPLES, FINAL_KINDS, finalOrder, finalOf, WAY, LINK, NEXT, FIGURE, GEN, addrWith, pairOut, restOnes, stepRounds, makeQuestion, powTable, wrongsOf, splitOut, pickOut, stackOut, maskBoardOut,
+  module.exports = { STATIONS, GROUPS, EXAMPLES, FINAL_KINDS, finalOrder, finalOf, WAY, LINK, NEXT, FIGURE, GEN, addrWith, pairOut, restOnes, stepRounds, makeQuestion, powTable, wrongsOf, splitOut, pickOut, stackOut, maskBoardOut, onesPerOctet,
     ipToInt, intToIp, maskStr, netInt, bcInt, bin8, cutOct, cutBit, breakdown };
 }

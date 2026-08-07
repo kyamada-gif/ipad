@@ -779,15 +779,34 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
           </React.Fragment>
         ))}
       </div>
-      <div className="dots ticks">
-        <span className="d-lab">1の数</span>
-        {[8, 16, 24, 32].map((t, i) => (
-          <React.Fragment key={t}>
-            {i > 0 && <span className="dot"> </span>}
-            <span className="tick">{t}</span>
-          </React.Fragment>
-        ))}
-      </div>
+      {/* マスク → / の向きでは、**答えの /◯ がどこから出てくるのかを、ここで言う。**
+          オクテットの真下に「そのオクテットの 1 の数」を並べる（255 は 8個、240 は 4個）。
+          足すとプレフィックス長そのもの。前はここが 8 16 24 32 の動かない目盛りで、
+          押しても変わらないので、28 の出どころを1つも言っていなかった。
+          / → マスク の向きでは、目盛りのままでよい（/28 が 24 と 32 の間、が目で分かる） */}
+      {q.goal === "toLen" ? (
+        <div className="dots ticks">
+          <span className="d-lab">1 の数</span>
+          {[0, 1, 2, 3].map((i) => (
+            <React.Fragment key={i}>
+              {i > 0 && <span className="dot plus">＋</span>}
+              <span className={"tick" + (i < full || (i === full && bits) ? " on" : "")}>
+                {full || bits ? d.ones[i] : ""}
+              </span>
+            </React.Fragment>
+          ))}
+        </div>
+      ) : (
+        <div className="dots ticks">
+          <span className="d-lab">1の数</span>
+          {[8, 16, 24, 32].map((t, i) => (
+            <React.Fragment key={t}>
+              {i > 0 && <span className="dot"> </span>}
+              <span className="tick">{t}</span>
+            </React.Fragment>
+          ))}
+        </div>
+      )}
 
       {/* ②は、①を1つでも押してから出す。
           8 で割り切れるときは押すところを出さず、「0 のまま」と言い切る */}
@@ -824,6 +843,16 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
             </div>
           )}
         </>
+      )}
+
+      {/* 足し算そのものは、上の「1 の数」の行が ＋ 付きで見せている。
+          ここは**その合計だけ**を、名前を付けて出す。
+          式をもう1本 青い字で並べると、②の「128 ＋ 64 … ＝ 240」と見分けが付かない
+          （同じ見た目で別のことを言うのが、いちばん読みにくい）。 */}
+      {q.goal === "toLen" && (full > 0 || !!bits) && (
+        <div className="out">
+          <span className="o-n">1 の数を全部足すと <b>{d.len}</b></span>
+        </div>
       )}
 
       {/* この2つは同じことを言っている、が見えるように、いつも並べて出す */}
@@ -1808,6 +1837,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dots{display:flex;align-items:center;gap:2px;margin-bottom:6px}
 .ticks{margin-top:-2px;margin-bottom:8px}
 .tick{flex:1;text-align:center;font-size:var(--f1);color:var(--ink2)}
+/* マスク → / の向きの「1 の数」。数えたオクテットの下だけ、青く濃くする。
+   ＋ は区切りの点と同じ場所に置く（列がずれると、真上のオクテットと結びつかない） */
+.tick.on{font-size:var(--f3);font-weight:800;color:var(--blue-t);font-family:ui-monospace,Menlo,monospace}
+.dot.plus{font-size:var(--f2);font-weight:400;color:var(--ink3)}
 .d-lab{width:44px;flex:none;font-size:var(--f1);color:var(--ink2);text-align:right;padding-right:6px}
 .row8.tight{gap:2px}
 .row8.answ{margin-bottom:10px}

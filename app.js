@@ -1008,7 +1008,17 @@ function MaskBoard({
       full: i < full ? i : i + 1,
       bits: 0
     })
-  }, i < full ? 255 : i === full ? d.mask.split(".")[i] : 0)))), /*#__PURE__*/React.createElement("div", {
+  }, i < full ? 255 : i === full ? d.mask.split(".")[i] : 0)))), q.goal === "toLen" ? /*#__PURE__*/React.createElement("div", {
+    className: "dots ticks"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "d-lab"
+  }, "1 \u306E\u6570"), [0, 1, 2, 3].map(i => /*#__PURE__*/React.createElement(React.Fragment, {
+    key: i
+  }, i > 0 && /*#__PURE__*/React.createElement("span", {
+    className: "dot plus"
+  }, "\uFF0B"), /*#__PURE__*/React.createElement("span", {
+    className: "tick" + (i < full || i === full && bits ? " on" : "")
+  }, full || bits ? d.ones[i] : "")))) : /*#__PURE__*/React.createElement("div", {
     className: "dots ticks"
   }, /*#__PURE__*/React.createElement("span", {
     className: "d-lab"
@@ -1045,7 +1055,11 @@ function MaskBoard({
     className: "out"
   }, /*#__PURE__*/React.createElement("span", {
     className: "o-x"
-  }, W8.filter(w => bits & w).join(" ＋ "), " \uFF1D ", bits))), /*#__PURE__*/React.createElement("div", {
+  }, W8.filter(w => bits & w).join(" ＋ "), " \uFF1D ", bits))), q.goal === "toLen" && (full > 0 || !!bits) && /*#__PURE__*/React.createElement("div", {
+    className: "out"
+  }, /*#__PURE__*/React.createElement("span", {
+    className: "o-n"
+  }, "1 \u306E\u6570\u3092\u5168\u90E8\u8DB3\u3059\u3068 ", /*#__PURE__*/React.createElement("b", null, d.len))), /*#__PURE__*/React.createElement("div", {
     className: "derive"
   }, /*#__PURE__*/React.createElement("div", {
     className: "d-r" + (q.goal === "toLen" ? " ans" : "")
@@ -2226,6 +2240,10 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .dots{display:flex;align-items:center;gap:2px;margin-bottom:6px}
 .ticks{margin-top:-2px;margin-bottom:8px}
 .tick{flex:1;text-align:center;font-size:var(--f1);color:var(--ink2)}
+/* マスク → / の向きの「1 の数」。数えたオクテットの下だけ、青く濃くする。
+   ＋ は区切りの点と同じ場所に置く（列がずれると、真上のオクテットと結びつかない） */
+.tick.on{font-size:var(--f3);font-weight:800;color:var(--blue-t);font-family:ui-monospace,Menlo,monospace}
+.dot.plus{font-size:var(--f2);font-weight:400;color:var(--ink3)}
 .d-lab{width:44px;flex:none;font-size:var(--f1);color:var(--ink2);text-align:right;padding-right:6px}
 .row8.tight{gap:2px}
 .row8.answ{margin-bottom:10px}
