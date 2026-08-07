@@ -729,7 +729,9 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
         {/* マスク → / の向きでは、まだ「8ずつ区切る」ものが無い。数えるのは 255 の数 */}
         {/* 「そろったオクテット」では、何がそろったのか分からない。
             説明の1枚（WAY.S8）と同じ「1 だけで埋まった」に合わせる */}
-        {q.goal === "toMask" ? <>① 左から <b>8 ずつ</b> 区切って、<b>1 だけで埋まった</b>オクテットを <b>255</b> にします</> : <>① 左から <b>255</b> がいくつ並んでいるかを選びます</>}
+        {/* **押す動作をそのまま言う。**「いくつ並んでいるかを選びます」だと、
+            何を押せばいいのかが1つ余分に考えないと分からない */}
+        {q.goal === "toMask" ? <>① 左から <b>8 ずつ</b> 区切って、<b>1 だけで埋まった</b>オクテットを <b>255</b> にします</> : <>① <b>255</b> のオクテットを、左から順に押します</>}
       </div>
       <div className="dots">
         <span className="d-lab" />
@@ -762,7 +764,7 @@ function MaskBoard({ q, value, onChange, locked, onSubmit }) {
           <div className={"lead " + (bits ? "past" : "now")}>
             {q.goal === "toMask"
               ? <>② 余りの <b>{q.board.rest} 個</b> を、次のオクテットに左から <b>1</b> で並べます</>
-              : <>② <b>255 でない数</b>の並びを、マスを押して作ります</>}
+              : <>② <b>255 でないオクテット</b>を、1 と 0 で作ります</>}
           </div>
           <div className="split">
             <div className="sp-lab" />
@@ -1536,7 +1538,6 @@ export default function App() {
     if (screen === "home") homeY.current = window.scrollY;
     // 練習は、まず説明の1枚から。そこから暗記ドリルかテストへ行く
     if (test == null) { setSheetOf(station); setScreen("memo"); return; }
-    if (test === "drill") { setSheetOf(station); setScreen("drill"); return; }
     const first = !progress[station];         // そのステージが初めてか
     const queue = [];
     const n = sizeOf(test, station);

@@ -959,7 +959,7 @@ function MaskBoard({
     className: "box"
   }, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (full ? "past" : "now")
-  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "8 \u305A\u3064"), " \u533A\u5207\u3063\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "1 \u3060\u3051\u3067\u57CB\u307E\u3063\u305F"), "\u30AA\u30AF\u30C6\u30C3\u30C8\u3092 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u306B\u3057\u307E\u3059") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u304C\u3044\u304F\u3064\u4E26\u3093\u3067\u3044\u308B\u304B\u3092\u9078\u3073\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 \u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "8 \u305A\u3064"), " \u533A\u5207\u3063\u3066\u3001", /*#__PURE__*/React.createElement("b", null, "1 \u3060\u3051\u3067\u57CB\u307E\u3063\u305F"), "\u30AA\u30AF\u30C6\u30C3\u30C8\u3092 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u306B\u3057\u307E\u3059") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2460 ", /*#__PURE__*/React.createElement("b", null, "255"), " \u306E\u30AA\u30AF\u30C6\u30C3\u30C8\u3092\u3001\u5DE6\u304B\u3089\u9806\u306B\u62BC\u3057\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "dots"
   }, /*#__PURE__*/React.createElement("span", {
     className: "d-lab"
@@ -987,7 +987,7 @@ function MaskBoard({
     className: "sub"
   }, "\u2461 \u4F59\u308A\u306F 0\u500B \u306A\u306E\u3067\u3001\u6B8B\u308A\u306E\u30AA\u30AF\u30C6\u30C3\u30C8\u306F ", /*#__PURE__*/React.createElement("b", null, "0 \u306E\u307E\u307E"), "\u3067\u3059") : full >= 1 && full < 4 && /*#__PURE__*/React.createElement(React.Fragment, null, /*#__PURE__*/React.createElement("div", {
     className: "lead " + (bits ? "past" : "now")
-  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2461 \u4F59\u308A\u306E ", /*#__PURE__*/React.createElement("b", null, q.board.rest, " \u500B"), " \u3092\u3001\u6B21\u306E\u30AA\u30AF\u30C6\u30C3\u30C8\u306B\u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "1"), " \u3067\u4E26\u3079\u307E\u3059") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2461 ", /*#__PURE__*/React.createElement("b", null, "255 \u3067\u306A\u3044\u6570"), "\u306E\u4E26\u3073\u3092\u3001\u30DE\u30B9\u3092\u62BC\u3057\u3066\u4F5C\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
+  }, q.goal === "toMask" ? /*#__PURE__*/React.createElement(React.Fragment, null, "\u2461 \u4F59\u308A\u306E ", /*#__PURE__*/React.createElement("b", null, q.board.rest, " \u500B"), " \u3092\u3001\u6B21\u306E\u30AA\u30AF\u30C6\u30C3\u30C8\u306B\u5DE6\u304B\u3089 ", /*#__PURE__*/React.createElement("b", null, "1"), " \u3067\u4E26\u3079\u307E\u3059") : /*#__PURE__*/React.createElement(React.Fragment, null, "\u2461 ", /*#__PURE__*/React.createElement("b", null, "255 \u3067\u306A\u3044\u30AA\u30AF\u30C6\u30C3\u30C8"), "\u3092\u30011 \u3068 0 \u3067\u4F5C\u308A\u307E\u3059")), /*#__PURE__*/React.createElement("div", {
     className: "split"
   }, /*#__PURE__*/React.createElement("div", {
     className: "sp-lab"
@@ -1902,11 +1902,6 @@ function App() {
     if (test == null) {
       setSheetOf(station);
       setScreen("memo");
-      return;
-    }
-    if (test === "drill") {
-      setSheetOf(station);
-      setScreen("drill");
       return;
     }
     const first = !progress[station]; // そのステージが初めてか
