@@ -10,7 +10,7 @@
 const path = require("path"), fs = require("fs");
 const R = path.join(__dirname, "..");
 const { JSDOM } = require(path.join(R, ".check/node_modules/jsdom"));
-const { STATIONS } = require(path.join(R, "gen.js"));
+const { STATIONS, GROUPS } = require(path.join(R, "gen.js"));
 const B = ["vendor/react.production.min.js", "vendor/react-dom.production.min.js", "gen.js", "app.js"]
   .map((f) => fs.readFileSync(path.join(R, f), "utf8")).join("\n");
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -74,6 +74,28 @@ async function toHome(h) {
     h.click(t2.querySelector(".t-h")); await wait(80);
     if (!h.$(".blocked")) why.push("鍵の札を押しても、開く条件が出ない");
     console.log(`  ① まっさら      ${lamps.join("")}   条件の案内:${h.$(".blocked") ? "出る" : "出ない"}`);
+
+    /* まとまりの最後の、押すと開くブロック。**閉じているのが最初の姿。**
+       置き場所（基礎の最後の札の下）も、gen.js の GROUPS から見て確かめる */
+    const gs = GROUPS.filter((g) => g.tip);
+    if (!gs.length) why.push("押すと開くブロックが gen.js に1つも無い");
+    const tb = h.$$(".tipb");
+    if (tb.length !== gs.length) why.push(`押すと開くブロックが ${tb.length} 個（GROUPS では ${gs.length} 個）`);
+    for (const b of tb) {
+      if (b.querySelector(".tipb-b")) why.push("押す前から中身が開いている");
+      h.click(b.querySelector(".tipb-h")); await wait(60);
+      if (!b.querySelector(".tipb-b")) why.push("押しても中身が開かない");
+      // 中身が本当に出ているか（枠だけ開いて空、を通さない）
+      if (b.querySelectorAll(".tip-r").length === 0) why.push("開いても行が1つも無い");
+      h.click(b.querySelector(".tipb-h")); await wait(60);
+      if (b.querySelector(".tipb-b")) why.push("もう一度押しても閉じない");
+    }
+    // 基礎の最後＝ステージ4の札の下に出ているか（札より前や、まとまりの頭に出ていない）
+    const kids = [...h.$(".road").children];
+    const at = kids.findIndex((k) => k.querySelector(".tipb"));
+    const no = at >= 0 ? kids[at].querySelector(".t-name").textContent.trim().split("　")[0] : "無し";
+    if (String(no) !== String(gs[0].to)) why.push(`ブロックがステージ ${no} の下（基礎の最後は ${gs[0].to}）`);
+    console.log(`  ①' コツのブロック  ${tb.length}個   置き場所:ステージ${no} の下   押すと開く:${why.length ? "NG" : "OK"}`);
   }
 
   /* ② 練習を5問。● が付いて、次のステージの鍵が外れる */

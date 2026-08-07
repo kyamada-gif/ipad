@@ -129,6 +129,10 @@ function Home({ progress, unlock, onUnlock, onStart }) {
               {blocked === s.id && open && (
                 <div className="blocked">先に練習でできると、テストが開きます</div>
               )}
+              {/* まとまりの最後の札の下。押すまで閉じている（開いたままだと、札の列が読めなくなる） */}
+              {GROUPS.find((x) => x.endAt === s.id && x.tip) && (
+                <TipBlock tip={GROUPS.find((x) => x.endAt === s.id).tip} />
+              )}
             </div>
           );
         })}
@@ -139,6 +143,36 @@ function Home({ progress, unlock, onUnlock, onStart }) {
       <button className={"unlock" + (unlock ? " on" : "")} onClick={() => onUnlock(!unlock)}>
         {unlock ? "鍵をかけ直す" : "全部開く（お試し）"}
       </button>
+    </div>
+  );
+}
+
+/** まとまりの最後に置く、押すと開くブロック。中身は gen.js の GROUPS の tip。
+ *  **解き方はここに書かない。**教材の手順で解けるようになったうえで、
+ *  足し算を省ける形だけを置く。閉じているのが最初の姿。 */
+function TipBlock({ tip }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="tipb">
+      {/* 枠があるもの＝押せるもの。開いているかどうかは、右の印の向きで言う */}
+      <button className="tipb-h" onClick={() => setOpen(!open)}>
+        <span>{tip.label}</span>
+        <span className="tipb-m">{open ? "−" : "＋"}</span>
+      </button>
+      {open && (
+        <div className="tipb-b">
+          <div className="tipb-s">{tip.sub}</div>
+          {tip.parts.map((p, i) => (
+            <div key={i} className="tip-p">
+              <div className="tip-h">{p.h}</div>
+              <div className="tip-s">{p.b}</div>
+              {p.rows.map(([k, v], j) => (
+                <div key={j} className="tip-r"><b>{k}</b><i className="tip-a">→</i><span>{v}</span></div>
+              ))}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -1690,6 +1724,23 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .t-ex{display:block;font-size:var(--f1);color:var(--blue-t);margin-top:4px;
   font-family:ui-monospace,Menlo,monospace;word-break:break-all}
 .blocked{font-size:var(--f1);color:var(--gold);text-align:center;padding:8px 0}
+/* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
+   枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
+   閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
+.tipb{margin-top:var(--s3);border:1px solid var(--bg-tile);border-radius:12px;background:var(--bg1)}
+.tipb-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  width:100%;min-height:44px;text-align:left;padding:var(--s3) var(--s4);
+  font-size:var(--f2);font-weight:700;color:var(--ink2)}
+.tipb-m{font-size:var(--f3);color:var(--ink3);flex:0 0 auto}
+.tipb-b{padding:0 var(--s4) var(--s4)}
+.tipb-s{font-size:var(--f1);color:var(--ink2);line-height:1.7}
+.tip-p{margin-top:var(--s4)}
+.tip-h{font-size:var(--f2);font-weight:700;color:var(--ink);line-height:1.6}
+.tip-s{font-size:var(--f1);color:var(--ink2);line-height:1.7;margin-top:var(--s1)}
+.tip-r{display:flex;align-items:baseline;gap:var(--s2);margin-top:var(--s2)}
+.tip-r b{font-size:var(--f3);color:var(--blue-t);font-family:ui-monospace,Menlo,monospace}
+.tip-a{font-style:normal;font-size:var(--f1);color:var(--ink3)}
+.tip-r span{font-size:var(--f2);color:var(--ink)}
 .foot{font-size:var(--f2);color:var(--ink2);line-height:2;margin-top:22px;text-align:center}
 
 /* 練習 */

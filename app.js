@@ -167,13 +167,48 @@ function Home({
       className: "blocked"
     }, s.need.map(n => byId(n).name).join(" と "), " \u304C\u3067\u304D\u308B\u3068\u958B\u304D\u307E\u3059"), blocked === s.id && open && /*#__PURE__*/React.createElement("div", {
       className: "blocked"
-    }, "\u5148\u306B\u7DF4\u7FD2\u3067\u3067\u304D\u308B\u3068\u3001\u30C6\u30B9\u30C8\u304C\u958B\u304D\u307E\u3059"));
+    }, "\u5148\u306B\u7DF4\u7FD2\u3067\u3067\u304D\u308B\u3068\u3001\u30C6\u30B9\u30C8\u304C\u958B\u304D\u307E\u3059"), GROUPS.find(x => x.endAt === s.id && x.tip) && /*#__PURE__*/React.createElement(TipBlock, {
+      tip: GROUPS.find(x => x.endAt === s.id).tip
+    }));
   })), /*#__PURE__*/React.createElement("div", {
     className: "foot"
   }, "\u25CB \u307E\u3060\u3000\u3000\u25CF \u7DF4\u7FD2\u304C\u3067\u304D\u305F\u3000\u3000\uD83C\uDFC5 \u30D0\u30C3\u30B8\uFF08\u30C6\u30B9\u30C8\u30679\u5272\uFF09"), /*#__PURE__*/React.createElement("button", {
     className: "unlock" + (unlock ? " on" : ""),
     onClick: () => onUnlock(!unlock)
   }, unlock ? "鍵をかけ直す" : "全部開く（お試し）"));
+}
+
+/** まとまりの最後に置く、押すと開くブロック。中身は gen.js の GROUPS の tip。
+ *  **解き方はここに書かない。**教材の手順で解けるようになったうえで、
+ *  足し算を省ける形だけを置く。閉じているのが最初の姿。 */
+function TipBlock({
+  tip
+}) {
+  const [open, setOpen] = useState(false);
+  return /*#__PURE__*/React.createElement("div", {
+    className: "tipb"
+  }, /*#__PURE__*/React.createElement("button", {
+    className: "tipb-h",
+    onClick: () => setOpen(!open)
+  }, /*#__PURE__*/React.createElement("span", null, tip.label), /*#__PURE__*/React.createElement("span", {
+    className: "tipb-m"
+  }, open ? "−" : "＋")), open && /*#__PURE__*/React.createElement("div", {
+    className: "tipb-b"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "tipb-s"
+  }, tip.sub), tip.parts.map((p, i) => /*#__PURE__*/React.createElement("div", {
+    key: i,
+    className: "tip-p"
+  }, /*#__PURE__*/React.createElement("div", {
+    className: "tip-h"
+  }, p.h), /*#__PURE__*/React.createElement("div", {
+    className: "tip-s"
+  }, p.b), p.rows.map(([k, v], j) => /*#__PURE__*/React.createElement("div", {
+    key: j,
+    className: "tip-r"
+  }, /*#__PURE__*/React.createElement("b", null, k), /*#__PURE__*/React.createElement("i", {
+    className: "tip-a"
+  }, "\u2192"), /*#__PURE__*/React.createElement("span", null, v)))))));
 }
 
 /* =========================================================================
@@ -2107,6 +2142,23 @@ button{font-family:inherit;border:0;background:none;color:inherit;cursor:pointer
 .t-ex{display:block;font-size:var(--f1);color:var(--blue-t);margin-top:4px;
   font-family:ui-monospace,Menlo,monospace;word-break:break-all}
 .blocked{font-size:var(--f1);color:var(--gold);text-align:center;padding:8px 0}
+/* まとまりの最後に置く、押すと開くブロック。**札ではないので、ランプもバッジも置かない。**
+   枠があるもの＝押せるもの。開いているかどうかは、右の印（＋ −）で言う。
+   閉じているのが最初の姿。開いたままだと、札の列が読めなくなる */
+.tipb{margin-top:var(--s3);border:1px solid var(--bg-tile);border-radius:12px;background:var(--bg1)}
+.tipb-h{display:flex;align-items:center;justify-content:space-between;gap:var(--s3);
+  width:100%;min-height:44px;text-align:left;padding:var(--s3) var(--s4);
+  font-size:var(--f2);font-weight:700;color:var(--ink2)}
+.tipb-m{font-size:var(--f3);color:var(--ink3);flex:0 0 auto}
+.tipb-b{padding:0 var(--s4) var(--s4)}
+.tipb-s{font-size:var(--f1);color:var(--ink2);line-height:1.7}
+.tip-p{margin-top:var(--s4)}
+.tip-h{font-size:var(--f2);font-weight:700;color:var(--ink);line-height:1.6}
+.tip-s{font-size:var(--f1);color:var(--ink2);line-height:1.7;margin-top:var(--s1)}
+.tip-r{display:flex;align-items:baseline;gap:var(--s2);margin-top:var(--s2)}
+.tip-r b{font-size:var(--f3);color:var(--blue-t);font-family:ui-monospace,Menlo,monospace}
+.tip-a{font-style:normal;font-size:var(--f1);color:var(--ink3)}
+.tip-r span{font-size:var(--f2);color:var(--ink)}
 .foot{font-size:var(--f2);color:var(--ink2);line-height:2;margin-top:22px;text-align:center}
 
 /* 練習 */
